@@ -1,0 +1,111 @@
+# ================================
+# kohub 프로덕션 환경
+# 사용법: docker compose -f compose.prod.yml up -d
+# ================================
+
+services:
+  # PostgreSQL 데이터베이스
+  db:
+    image: docker.io/postgres:16-alpine
+    container_name: kohub-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - kohub-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - kohub-network
+
+  # Keycloak SSO
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: kohub-keycloak
+    command: start
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+      KC_PROXY: edge
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    networks:
+      - kohub-network
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kohub-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_DRIVER: org.postgresql.Driver
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      UPTIME_KUMA_ENABLED: "true"
+      UPTIME_KUMA_URL: ${UPTIME_KUMA_URL}
+      TERMIX_ENABLED: "true"
+      TERMIX_URL: ${TERMIX_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    restart: always
+    networks:
+      - kohub-network
+
+  # React Frontend (프로덕션 빌드)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kohub-frontend
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - kohub-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: docker.io/nginx:alpine
+    container_name: kohub-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+      - keycloak
+    restart: always
+    networks:
+      - kohub-network
+
+volumes:
+  kohub-db-data:
+
+networks:
+  kohub-network:
+    driver: bridge

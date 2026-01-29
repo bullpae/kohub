@@ -1,0 +1,66 @@
+# ================================
+# kohub 개발 환경 (Docker/Podman Compose)
+# 사용법: docker compose up -d
+# 포트: DB=5434, Backend=8082, Frontend=3002
+# ================================
+
+services:
+  # PostgreSQL 데이터베이스
+  db:
+    image: docker.io/postgres:16-alpine
+    container_name: kohub-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kohub}
+      POSTGRES_USER: ${POSTGRES_USER:-kohub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kohub123}
+    ports:
+      - "5434:5432"
+    volumes:
+      - kohub-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kohub} -d ${POSTGRES_DB:-kohub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kohub-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-kohub}
+      DB_USER: ${POSTGRES_USER:-kohub}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-kohub123}
+      DB_DRIVER: org.postgresql.Driver
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/kohub
+      CORS_ORIGINS: http://localhost:3002
+    ports:
+      - "8082:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # React Frontend (개발 모드)
+  frontend:
+    image: docker.io/node:20-alpine
+    container_name: kohub-frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8082/api/v1
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  kohub-db-data:
