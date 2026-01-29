@@ -29,7 +29,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8083/realms/kohub}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/k-ecp}
 
   h2:
     console:
@@ -98,7 +98,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8083/realms/kohub
+          issuer-uri: http://localhost:8180/realms/k-ecp
 
 logging:
   level:

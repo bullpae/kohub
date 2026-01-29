@@ -5,31 +5,61 @@ kohub는 MSP(Managed Service Provider) 운영을 위한 통합 플랫폼입니�
 외부 도구(Uptime Kuma, Termix 등)를 연계하여 모니터링 → 장애 대응 → 이력 관리 → AI 활용의 순환 구조를 제공합니다.
 
 ## Core Concept: Hub & Spoke Architecture
-```
-                    ┌─────────────────────────┐
-                    │      kohub (허브)        │
-                    │  - 티켓 시스템           │
-                    │  - 통합 대시보드         │
-                    │  - 어댑터 레이어         │
-                    └───────────┬─────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                       │                       │
-        ▼                       ▼                       ▼
-  [Uptime Kuma]           [Termix]              [Future Tools]
-   (모니터링)             (SSH 터미널)           Prometheus, etc.
+
+```mermaid
+flowchart TB
+    subgraph kohub[kohub - 허브]
+        TS[티켓 시스템]
+        DB[통합 대시보드]
+        AL[어댑터 레이어]
+    end
+    
+    subgraph External[외부 도구]
+        UK[Uptime Kuma<br/>모니터링]
+        TX[Termix<br/>SSH 터미널]
+        FT[Future Tools<br/>Prometheus, etc.]
+    end
+    
+    UK <-->|Webhook| AL
+    TX <-->|iframe/API| AL
+    FT <-->|Adapter| AL
+    
+    style kohub fill:#dbeafe,stroke:#2563eb
+    style UK fill:#dcfce7,stroke:#16a34a
+    style TX fill:#fef3c7,stroke:#d97706
+    style FT fill:#f3e8ff,stroke:#9333ea
 ```
 
 ## Tech Stack
-- Backend: Spring Boot 3.2.x, Java 17, Maven
-- Frontend: Vite + React 19 + TypeScript
-- Database: PostgreSQL 16
-- Migration: Flyway
-- Auth: Keycloak (OIDC/SSO)
-- Container: Docker/Podman Compose
-- AI: LangChain + Vector DB (Phase 2)
+
+```mermaid
+mindmap
+  root((kohub))
+    Backend
+      Spring Boot 3.2.x
+      Java 17
+      Maven
+    Frontend
+      Vite
+      React 19
+      TypeScript
+      Tailwind CSS
+    Database
+      PostgreSQL 16
+      Flyway
+    Auth
+      Keycloak
+      OIDC/SSO
+    Infra
+      Docker
+      Podman Compose
+    AI Phase2
+      LangChain
+      Vector DB
+```
 
 ## Repo Layout
+
 ```
 kohub/
 ├── AGENT.md              # 이 파일
@@ -38,7 +68,8 @@ kohub/
 │   ├── 01_prd.md         # 제품 요구사항
 │   ├── 02_architecture.md # 아키텍처 설계
 │   ├── 03_api_design.md  # API 설계
-│   └── 04_adapter_spec.md # 어댑터 명세
+│   ├── 04_adapter_spec.md # 어댑터 명세
+│   └── 05_ux_design.md   # UI/UX 설계
 ├── backend/              # Spring Boot 서비스
 │   ├── pom.xml
 │   ├── Dockerfile
@@ -81,75 +112,130 @@ podman-compose up -d
 
 ## Core Domains
 
-### 1. Host (서버 관리)
-```java
-Host {
-  id, name, description
-  connectionType: SSH | API | AGENT
-  sshConfig: { host, port, username, authType }
-  organizationId  // 멀티테넌시
-  adapters: { uptimeKumaMonitorId, termixHostId }
-  tags, status, createdAt, updatedAt
-}
+### 도메인 모델 관계도
+
+```mermaid
+erDiagram
+    Organization ||--o{ Host : contains
+    Organization ||--o{ User : has
+    Organization ||--o{ Ticket : owns
+    
+    Host ||--o{ Ticket : related
+    Host {
+        uuid id PK
+        string name
+        string description
+        enum connectionType
+        jsonb sshConfig
+        jsonb adapters
+        string[] tags
+        enum status
+    }
+    
+    User ||--o{ Ticket : creates
+    User ||--o{ Ticket : assigned
+    User }o--o{ Role : has
+    User {
+        uuid id PK
+        string keycloakId
+        string email
+        string name
+    }
+    
+    Ticket ||--o{ Activity : has
+    Ticket ||--o{ TerminalLog : contains
+    Ticket {
+        uuid id PK
+        string title
+        string description
+        enum source
+        string sourceEventId
+        enum status
+        enum priority
+        string resolution
+    }
+    
+    Role ||--o{ Permission : has
+    Role {
+        uuid id PK
+        string name
+    }
+    
+    Organization {
+        uuid id PK
+        string name
+        uuid parentId FK
+        jsonb settings
+    }
 ```
 
-### 2. Ticket (이슈/장애 관리)
-```java
-Ticket {
-  id, title, description
-  source: MANUAL | UPTIME_KUMA | PROMETHEUS | ...
-  sourceEventId  // 외부 시스템 이벤트 ID
-  hostId, organizationId
-  status: NEW → RECEIVED → IN_PROGRESS → RESOLVED → CLOSED
-  priority: CRITICAL | HIGH | MEDIUM | LOW
-  assigneeId, reporterId
-  activities: Activity[]
-  terminalLogs: TerminalLog[]
-  resolution, resolvedAt
-  aiSuggestions: AISuggestion[]
-}
-```
+### 티켓 상태 흐름
 
-### 3. Organization (조직/테넌트)
-```java
-Organization {
-  id, name, description
-  parentId  // 계층 구조 지원
-  settings: { timezone, language, notifications }
-}
-```
-
-### 4. User & Role (사용자/권한)
-```java
-User {
-  id, keycloakId, email, name
-  organizationId
-  roles: Role[]
-}
-
-Role {
-  id, name
-  permissions: Permission[]
-}
+```mermaid
+stateDiagram-v2
+    [*] --> NEW: 생성
+    
+    NEW --> RECEIVED: 접수
+    RECEIVED --> ASSIGNED: 담당자 배정
+    ASSIGNED --> IN_PROGRESS: 처리 시작
+    IN_PROGRESS --> PENDING: 보류
+    PENDING --> IN_PROGRESS: 재개
+    IN_PROGRESS --> RESOLVED: 해결
+    RESOLVED --> COMPLETED: 고객 확인
+    COMPLETED --> CLOSED: 종료
+    
+    COMPLETED --> REOPENED: 재오픈
+    REOPENED --> RECEIVED: 재접수
+    
+    NEW --> CLOSED: 취소/중복
 ```
 
 ## Adapter Interface
 
-### 어댑터 등록
-```java
-public interface ToolAdapter {
-    String getName();
-    AdapterType getType();  // MONITORING, TERMINAL, AUTOMATION, NOTIFICATION
+### 어댑터 구조
+
+```mermaid
+classDiagram
+    class ToolAdapter {
+        <<interface>>
+        +getName() String
+        +getType() AdapterType
+        +handleWebhook(payload) TicketCreateRequest
+        +getStatus(hostId) HostStatus
+        +executeAction(action, params) ActionResult
+    }
     
-    // Webhook 수신
-    TicketCreateRequest handleWebhook(Object payload);
+    class AdapterType {
+        <<enumeration>>
+        MONITORING
+        TERMINAL
+        AUTOMATION
+        NOTIFICATION
+    }
     
-    // 상태 조회
-    HostStatus getStatus(String hostId);
+    class UptimeKumaAdapter {
+        -baseUrl String
+        -apiKey String
+        +handleWebhook(payload)
+        +getMonitors()
+    }
     
-    // 액션 실행 (선택)
-    ActionResult executeAction(String action, Object params);
-}
+    class TermixAdapter {
+        -baseUrl String
+        +getTerminalUrl(hostId)
+        +getSessionLogs(sessionId)
+    }
+    
+    class PrometheusAdapter {
+        -baseUrl String
+        +handleWebhook(payload)
+        +queryMetrics(query)
+    }
+    
+    ToolAdapter <|.. UptimeKumaAdapter
+    ToolAdapter <|.. TermixAdapter
+    ToolAdapter <|.. PrometheusAdapter
+    ToolAdapter --> AdapterType
 ```
 
 ### 지원 어댑터 (계획)
@@ -166,6 +252,31 @@ public interface ToolAdapter {
 ### Base URL
 - API: `/api/v1`
 - 인증: Bearer JWT (Keycloak)
+
+### API 흐름
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant API as kohub API
+    participant KC as Keycloak
+    participant DB as PostgreSQL
+    participant UK as Uptime Kuma
+    
+    Client->>KC: 1. 로그인 요청
+    KC-->>Client: 2. JWT 토큰 발급
+    
+    Client->>API: 3. API 요청 (Bearer Token)
+    API->>KC: 4. 토큰 검증
+    KC-->>API: 5. 검증 결과
+    
+    API->>DB: 6. 데이터 조회/저장
+    DB-->>API: 7. 결과
+    API-->>Client: 8. 응답
+    
+    UK->>API: Webhook (장애 알림)
+    API->>DB: 티켓 자동 생성
+```
 
 ### 주요 Endpoints
 | Method | Endpoint | 설명 |
@@ -204,6 +315,36 @@ public interface ToolAdapter {
 ```
 
 ## Auth & Authorization
+
+### 인증 아키텍처
+
+```mermaid
+flowchart LR
+    subgraph Users[사용자]
+        U1[MSP 운영자]
+        U2[고객]
+    end
+    
+    subgraph KC[Keycloak]
+        Login[로그인]
+        Roles[역할 관리]
+    end
+    
+    subgraph Apps[애플리케이션]
+        FE[Frontend]
+        BE[Backend]
+        TX[Termix]
+    end
+    
+    U1 --> Login
+    U2 --> Login
+    Login -->|OIDC| FE
+    Login -->|OIDC| TX
+    FE -->|JWT| BE
+    Roles --> BE
+    
+    style KC fill:#fee2e2
+```
 
 ### Keycloak 역할
 | 역할 | 설명 |
@@ -266,8 +407,35 @@ git commit -m "refactor: 어댑터 인터페이스 개선"
 
 ## Phase Plan
 
+```mermaid
+gantt
+    title kohub 개발 로드맵
+    dateFormat  YYYY-MM-DD
+    
+    section Phase 1 - MVP
+    프로젝트 초기 구조     :done, p1-1, 2026-01-29, 1d
+    Host CRUD             :p1-2, after p1-1, 3d
+    Ticket CRUD           :p1-3, after p1-2, 5d
+    Keycloak 연동         :p1-4, after p1-3, 3d
+    Uptime Kuma 어댑터    :p1-5, after p1-4, 3d
+    Termix 연동           :p1-6, after p1-5, 2d
+    기본 대시보드         :p1-7, after p1-6, 3d
+    
+    section Phase 2 - 확장
+    AI 추천 (RAG)         :p2-1, after p1-7, 5d
+    터미널 로그 수집      :p2-2, after p2-1, 3d
+    Prometheus 어댑터     :p2-3, after p2-2, 3d
+    Slack/Teams 알림      :p2-4, after p2-3, 2d
+    
+    section Phase 3 - 고도화
+    Ansible 자동화        :p3-1, after p2-4, 5d
+    런북 실행             :p3-2, after p3-1, 3d
+    리포트 생성           :p3-3, after p3-2, 3d
+    AI 파인튜닝           :p3-4, after p3-3, 5d
+```
+
 ### Phase 1: MVP
-- [ ] 프로젝트 초기 구조
+- [x] 프로젝트 초기 구조
 - [ ] Host CRUD
 - [ ] Ticket CRUD + 상태 관리
 - [ ] Keycloak 연동
@@ -307,3 +475,4 @@ git commit -m "refactor: 어댑터 인터페이스 개선"
 - [Keycloak](https://www.keycloak.org/)
 - [KustHub](../KustHub) - 참고 프로젝트
 - [StockHub](../StockHub) - 참고 프로젝트
+- [UI/UX 설계](./docs/05_ux_design.md)

@@ -6,10 +6,21 @@ MSP(Managed Service Provider) 통합 운영 플랫폼
 
 kohub는 모니터링, 장애 대응, 이력 관리를 하나의 플랫폼으로 통합합니다.
 
-```
-모니터링 → 이벤트 발생 → 티켓 생성 → 터미널 접속 → 장애 해결 → 이력 저장 → AI 학습
-    ↑                                                                           ↓
-    └───────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    A[모니터링] -->|이벤트 발생| B[티켓 생성]
+    B -->|원클릭| C[터미널 접속]
+    C --> D[장애 해결]
+    D --> E[이력 저장]
+    E --> F[AI 학습]
+    F -->|기능 개선| A
+    
+    style A fill:#fee2e2
+    style B fill:#fef3c7
+    style C fill:#dbeafe
+    style D fill:#dcfce7
+    style E fill:#f3e8ff
+    style F fill:#fce7f3
 ```
 
 ## 주요 기능
@@ -23,22 +34,69 @@ kohub는 모니터링, 장애 대응, 이력 관리를 하나의 플랫폼으로
 
 ## 아키텍처
 
-```
-                    ┌─────────────────────────┐
-                    │      kohub (허브)        │
-                    │  - 티켓 시스템           │
-                    │  - 통합 대시보드         │
-                    │  - 어댑터 레이어         │
-                    └───────────┬─────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                       │                       │
-        ▼                       ▼                       ▼
-  [Uptime Kuma]           [Termix]              [Future Tools]
-   (모니터링)             (SSH 터미널)           Prometheus, etc.
+```mermaid
+flowchart TB
+    subgraph kohub[kohub - 허브]
+        direction TB
+        TS[🎫 티켓 시스템]
+        DB[📊 통합 대시보드]
+        AL[🔌 어댑터 레이어]
+    end
+    
+    subgraph External[외부 도구]
+        UK[Uptime Kuma<br/>🔍 모니터링]
+        TX[Termix<br/>💻 SSH 터미널]
+        FT[Future Tools<br/>📈 Prometheus, etc.]
+    end
+    
+    subgraph Auth[인증]
+        KC[Keycloak<br/>🔐 SSO]
+    end
+    
+    UK <-->|Webhook| AL
+    TX <-->|iframe/API| AL
+    FT <-->|Adapter| AL
+    KC <-->|OIDC| kohub
+    
+    style kohub fill:#dbeafe,stroke:#2563eb
+    style UK fill:#dcfce7,stroke:#16a34a
+    style TX fill:#fef3c7,stroke:#d97706
+    style FT fill:#f3e8ff,stroke:#9333ea
+    style KC fill:#fee2e2,stroke:#dc2626
 ```
 
 ## 기술 스택
+
+```mermaid
+flowchart LR
+    subgraph Frontend
+        V[Vite] --> R[React 18]
+        R --> TS[TypeScript]
+        R --> TW[Tailwind CSS]
+    end
+    
+    subgraph Backend
+        SB[Spring Boot 3.2] --> J[Java 17]
+        SB --> JPA[JPA]
+        SB --> FW[Flyway]
+    end
+    
+    subgraph Database
+        PG[(PostgreSQL 16)]
+    end
+    
+    subgraph Auth
+        KC[Keycloak]
+    end
+    
+    subgraph Container
+        DC[Docker Compose]
+    end
+    
+    Frontend <--> Backend
+    Backend <--> Database
+    Backend <--> Auth
+```
 
 | 영역 | 기술 |
 |------|------|
@@ -59,7 +117,7 @@ kohub는 모니터링, 장애 대응, 이력 관리를 하나의 플랫폼으로
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-org/kohub.git
+git clone https://github.com/bullpae/kohub.git
 cd kohub
 
 # 개발 환경 실행
@@ -82,6 +140,37 @@ podman-compose up -d
 - Frontend: http://localhost:3002
 - Backend API: http://localhost:8082/api/v1
 - API 문서: http://localhost:8082/swagger-ui.html
+
+## 프로젝트 구조
+
+```mermaid
+flowchart TB
+    subgraph Root[kohub/]
+        AGENT[AGENT.md]
+        README[README.md]
+        COMPOSE[compose.yml]
+        
+        subgraph Docs[docs/]
+            D1[01_prd.md]
+            D2[05_ux_design.md]
+        end
+        
+        subgraph BE[backend/]
+            POM[pom.xml]
+            SRC1[src/main/java]
+            SRC2[src/test/java]
+        end
+        
+        subgraph FE[frontend/]
+            PKG[package.json]
+            SRCF[src/]
+        end
+        
+        subgraph KC[keycloak/]
+            IMP[import/]
+        end
+    end
+```
 
 ## 개발
 
@@ -121,10 +210,41 @@ npm run lint
 npm run build
 ```
 
+## 로드맵
+
+```mermaid
+timeline
+    title kohub 개발 로드맵
+    
+    section Phase 1 - MVP
+        프로젝트 초기화 : 완료
+        Host/Ticket CRUD : 진행중
+        Keycloak 연동 : 예정
+        어댑터 연동 : 예정
+    
+    section Phase 2 - 확장
+        AI 추천 (RAG) : 예정
+        Prometheus : 예정
+        Slack 알림 : 예정
+    
+    section Phase 3 - 고도화
+        Ansible 자동화 : 예정
+        리포트 생성 : 예정
+        AI 파인튜닝 : 예정
+```
+
 ## 문서
 
 - [AGENT.md](./AGENT.md) - 프로젝트 상세 가이드
-- [docs/](./docs/) - 설계 문서
+- [docs/05_ux_design.md](./docs/05_ux_design.md) - UI/UX 설계
+
+## 기여
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: 기능 설명'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 라이선스
 
