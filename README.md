@@ -152,7 +152,10 @@ flowchart TB
         
         subgraph Docs[docs/]
             D1[01_prd.md]
-            D2[05_ux_design.md]
+            D2[02_architecture.md]
+            D3[03_api_design.md]
+            D4[04_adapter_spec.md]
+            D5[05_ux_design.md]
         end
         
         subgraph BE[backend/]
@@ -236,6 +239,10 @@ timeline
 ## 문서
 
 - [AGENT.md](./AGENT.md) - 프로젝트 상세 가이드
+- [docs/01_prd.md](./docs/01_prd.md) - 제품 요구사항
+- [docs/02_architecture.md](./docs/02_architecture.md) - 아키텍처 설계
+- [docs/03_api_design.md](./docs/03_api_design.md) - API 설계
+- [docs/04_adapter_spec.md](./docs/04_adapter_spec.md) - 어댑터 명세
 - [docs/05_ux_design.md](./docs/05_ux_design.md) - UI/UX 설계
 
 ## 기여
