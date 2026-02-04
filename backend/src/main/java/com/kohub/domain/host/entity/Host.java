@@ -2,8 +2,6 @@ package com.kohub.domain.host.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,8 +35,7 @@ public class Host {
     @Builder.Default
     private ConnectionType connectionType = ConnectionType.SSH;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "ssh_config", columnDefinition = "jsonb")
+    @Embedded
     private SshConfig sshConfig;
 
     @ElementCollection(fetch = FetchType.EAGER)

@@ -1,19 +1,8 @@
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Edit, Trash2, Terminal, Server } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Terminal, Server, Globe, Clock, Tag } from 'lucide-react'
 import { getHost, deleteHost, changeHostStatus } from '../api/hosts'
-
-const statusColors: Record<string, string> = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  INACTIVE: 'bg-gray-100 text-gray-800',
-  MAINTENANCE: 'bg-yellow-100 text-yellow-800',
-}
-
-const statusLabels: Record<string, string> = {
-  ACTIVE: '활성',
-  INACTIVE: '비활성',
-  MAINTENANCE: '점검중',
-}
+import { Card, CardHeader, StatusBadge, Loading, Button } from '../components/common'
 
 export default function HostDetail() {
   const { id } = useParams()
@@ -48,17 +37,10 @@ export default function HostDetail() {
     }
   }
 
-  const handleStatusChange = (status: string) => {
-    statusMutation.mutate(status)
-  }
-
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
+      <div className="p-6 flex justify-center items-center min-h-96">
+        <Loading size="lg" text="호스트 정보를 불러오는 중..." />
       </div>
     )
   }
@@ -66,169 +48,160 @@ export default function HostDetail() {
   if (error || !host) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          호스트 정보를 불러오는데 실패했습니다.
-        </div>
+        <Card className="bg-red-50 border-red-200">
+          <p className="text-red-600">호스트 정보를 불러오는데 실패했습니다.</p>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-4">
           <button
             onClick={() => navigate('/hosts')}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-[var(--kecp-gray-100)] rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-[var(--kecp-gray-500)]" />
           </button>
-          <div>
-            <div className="flex items-center gap-3">
-              <Server className="w-8 h-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">{host.name}</h1>
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[host.status]}`}>
-                {statusLabels[host.status]}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[var(--kecp-primary)] to-[var(--kecp-secondary)] flex items-center justify-center">
+              <Server className="w-7 h-7 text-white" />
             </div>
-            {host.description && (
-              <p className="text-gray-500 mt-1 ml-11">{host.description}</p>
-            )}
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-[var(--kecp-gray-900)]">{host.name}</h1>
+                <StatusBadge status={host.status} />
+              </div>
+              {host.description && (
+                <p className="text-[var(--kecp-gray-500)] mt-1">{host.description}</p>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => alert('터미널 기능은 Phase 1 이후 구현 예정입니다.')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <Button
+            variant="primary"
+            icon={Terminal}
+            onClick={() => alert('터미널 기능은 Phase 2에서 구현됩니다.')}
           >
-            <Terminal className="w-5 h-5" />
             터미널
-          </button>
-          <Link
-            to={`/hosts/${id}/edit`}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
-            <Edit className="w-5 h-5" />
-            수정
+          </Button>
+          <Link to={`/hosts/${id}/edit`}>
+            <Button variant="secondary" icon={Edit}>
+              수정
+            </Button>
           </Link>
-          <button
-            onClick={handleDelete}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
-          >
-            <Trash2 className="w-5 h-5" />
+          <Button variant="danger" icon={Trash2} onClick={handleDelete}>
             삭제
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* 기본 정보 */}
-        <div className="col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">호스트 정보</h2>
-          
-          <dl className="grid grid-cols-2 gap-4">
-            <div>
-              <dt className="text-sm text-gray-500">연결 유형</dt>
-              <dd className="mt-1 text-gray-900">{host.connectionType}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-gray-500">상태</dt>
-              <dd className="mt-1">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[host.status]}`}>
-                  {statusLabels[host.status]}
-                </span>
-              </dd>
-            </div>
-            
-            {host.sshConfig && (
-              <>
-                <div>
-                  <dt className="text-sm text-gray-500">SSH 주소</dt>
-                  <dd className="mt-1 text-gray-900 font-mono">
-                    {host.sshConfig.host}:{host.sshConfig.port}
-                  </dd>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 호스트 정보 */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader title="연결 정보" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-[var(--kecp-gray-500)] uppercase tracking-wide mb-1">연결 유형</p>
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-[var(--kecp-gray-400)]" />
+                  <span className="text-[var(--kecp-gray-900)] font-medium">{host.connectionType}</span>
                 </div>
-                <div>
-                  <dt className="text-sm text-gray-500">SSH 사용자</dt>
-                  <dd className="mt-1 text-gray-900 font-mono">{host.sshConfig.username}</dd>
-                </div>
-              </>
-            )}
+              </div>
+              {host.sshConfig && (
+                <>
+                  <div>
+                    <p className="text-xs font-medium text-[var(--kecp-gray-500)] uppercase tracking-wide mb-1">SSH 주소</p>
+                    <p className="text-[var(--kecp-gray-900)] font-mono">
+                      {host.sshConfig.host}:{host.sshConfig.port}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[var(--kecp-gray-500)] uppercase tracking-wide mb-1">사용자</p>
+                    <p className="text-[var(--kecp-gray-900)] font-mono">{host.sshConfig.username}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
 
-            <div>
-              <dt className="text-sm text-gray-500">생성일</dt>
-              <dd className="mt-1 text-gray-900">
-                {new Date(host.createdAt).toLocaleString('ko-KR')}
-              </dd>
+          <Card>
+            <CardHeader title="시간 정보" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-[var(--kecp-gray-500)] uppercase tracking-wide mb-1">생성일</p>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[var(--kecp-gray-400)]" />
+                  <span className="text-[var(--kecp-gray-900)]">
+                    {new Date(host.createdAt).toLocaleString('ko-KR')}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[var(--kecp-gray-500)] uppercase tracking-wide mb-1">수정일</p>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[var(--kecp-gray-400)]" />
+                  <span className="text-[var(--kecp-gray-900)]">
+                    {new Date(host.updatedAt).toLocaleString('ko-KR')}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div>
-              <dt className="text-sm text-gray-500">수정일</dt>
-              <dd className="mt-1 text-gray-900">
-                {new Date(host.updatedAt).toLocaleString('ko-KR')}
-              </dd>
-            </div>
-          </dl>
+          </Card>
 
           {/* 태그 */}
           {host.tags && host.tags.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">태그</h3>
+            <Card>
+              <CardHeader title="태그" />
               <div className="flex flex-wrap gap-2">
                 {host.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--kecp-primary-light)] text-[var(--kecp-primary)] rounded-full text-sm font-medium"
                   >
+                    <Tag className="w-3.5 h-3.5" />
                     {tag}
                   </span>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </div>
 
         {/* 상태 변경 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">상태 변경</h2>
-          <div className="space-y-2">
-            <button
-              onClick={() => handleStatusChange('ACTIVE')}
-              disabled={host.status === 'ACTIVE' || statusMutation.isPending}
-              className={`w-full py-2 px-4 rounded-lg text-left flex items-center gap-2 ${
-                host.status === 'ACTIVE' 
-                  ? 'bg-green-100 text-green-800 font-medium' 
-                  : 'hover:bg-gray-50 text-gray-700'
-              }`}
-            >
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              활성화
-            </button>
-            <button
-              onClick={() => handleStatusChange('MAINTENANCE')}
-              disabled={host.status === 'MAINTENANCE' || statusMutation.isPending}
-              className={`w-full py-2 px-4 rounded-lg text-left flex items-center gap-2 ${
-                host.status === 'MAINTENANCE' 
-                  ? 'bg-yellow-100 text-yellow-800 font-medium' 
-                  : 'hover:bg-gray-50 text-gray-700'
-              }`}
-            >
-              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-              점검 중
-            </button>
-            <button
-              onClick={() => handleStatusChange('INACTIVE')}
-              disabled={host.status === 'INACTIVE' || statusMutation.isPending}
-              className={`w-full py-2 px-4 rounded-lg text-left flex items-center gap-2 ${
-                host.status === 'INACTIVE' 
-                  ? 'bg-gray-200 text-gray-800 font-medium' 
-                  : 'hover:bg-gray-50 text-gray-700'
-              }`}
-            >
-              <span className="w-2 h-2 bg-gray-500 rounded-full"></span>
-              비활성화
-            </button>
-          </div>
+        <div>
+          <Card>
+            <CardHeader title="상태 변경" />
+            <div className="space-y-2">
+              {[
+                { status: 'ACTIVE', label: '활성화', color: 'bg-green-500' },
+                { status: 'MAINTENANCE', label: '점검 중', color: 'bg-yellow-500' },
+                { status: 'INACTIVE', label: '비활성화', color: 'bg-gray-500' },
+              ].map((item) => (
+                <button
+                  key={item.status}
+                  onClick={() => statusMutation.mutate(item.status)}
+                  disabled={host.status === item.status || statusMutation.isPending}
+                  className={`w-full py-3 px-4 rounded-lg text-left flex items-center gap-3 transition-all ${
+                    host.status === item.status 
+                      ? 'bg-[var(--kecp-primary-light)] text-[var(--kecp-primary)] font-medium ring-2 ring-[var(--kecp-primary)]' 
+                      : 'hover:bg-[var(--kecp-gray-50)] text-[var(--kecp-gray-700)]'
+                  } disabled:opacity-50`}
+                >
+                  <span className={`w-3 h-3 ${item.color} rounded-full`} />
+                  {item.label}
+                  {host.status === item.status && (
+                    <span className="ml-auto text-xs">현재</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </Card>
         </div>
       </div>
     </div>
