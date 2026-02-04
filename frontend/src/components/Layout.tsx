@@ -71,7 +71,7 @@ export default function Layout() {
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-[var(--kecp-gray-200)]
         transform transition-transform duration-200 ease-in-out
-        lg:translate-x-0 lg:static lg:inset-auto lg:top-8
+        lg:translate-x-0 lg:fixed lg:top-8
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* 로고 */}
@@ -123,7 +123,7 @@ export default function Layout() {
       </aside>
 
       {/* 메인 컨텐츠 */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 lg:pt-8">
         {/* 헤더 */}
         <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-white border-b border-[var(--kecp-gray-200)] lg:px-6">
           <button 
