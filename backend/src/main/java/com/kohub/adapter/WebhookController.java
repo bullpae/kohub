@@ -83,16 +83,36 @@ public class WebhookController {
     }
 
     /**
-     * Prometheus Alertmanager Webhook 수신 (Phase 2)
+     * Prometheus Alertmanager Webhook 수신
      */
     @PostMapping("/prometheus")
     public ResponseEntity<ApiResponse<WebhookResult>> handlePrometheus(
             @RequestBody String payload,
             @RequestHeader Map<String, String> headers) {
         
-        log.info("Prometheus Webhook 수신 (Phase 2에서 구현 예정)");
-        return ResponseEntity.ok(ApiResponse.success(
-                new WebhookResult(true, "Not implemented yet", null, null)));
+        log.info("Prometheus Alertmanager Webhook 수신");
+        log.debug("Payload: {}", payload);
+        
+        ToolAdapter adapter = adapters.get("prometheus");
+        if (adapter == null) {
+            log.error("prometheus 어댑터를 찾을 수 없습니다");
+            return ResponseEntity.ok(ApiResponse.success(
+                    new WebhookResult(false, "Adapter not found", null, null)));
+        }
+        
+        return adapter.handleWebhook(payload, headers)
+                .map(request -> {
+                    TicketResponse ticket = ticketService.create(request, null);
+                    log.info("Prometheus Alert으로 티켓 생성: ticketId={}", ticket.getId());
+                    return ResponseEntity.ok(ApiResponse.success(
+                            new WebhookResult(true, "Ticket created from Prometheus alert", 
+                                    ticket.getId().toString(), null)));
+                })
+                .orElseGet(() -> {
+                    log.info("Prometheus Webhook 처리됨 (티켓 생성 없음 - resolved 또는 무시됨)");
+                    return ResponseEntity.ok(ApiResponse.success(
+                            new WebhookResult(true, "Processed (no ticket created)", null, null)));
+                });
     }
 
     /**

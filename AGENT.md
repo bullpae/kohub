@@ -460,11 +460,11 @@ gantt
 - [x] kecp-sso 연동 (Keycloak SSO)
 - [x] podman-compose 배포 환경
 
-### Phase 2: 확장
-- [ ] AI 추천 (RAG 기반)
-- [ ] 터미널 로그 수집
-- [ ] Prometheus 어댑터
-- [ ] Slack/Teams 알림
+### Phase 2: 확장 ✅
+- [x] AI 추천 (키워드 기반 유사 티켓)
+- [x] 터미널 로그 수집 강화 (명령어 파싱, 태깅)
+- [x] Prometheus 어댑터 (Alertmanager Webhook)
+- [x] Slack/Teams 알림 (NotificationService)
 
 ### Phase 3: 고도화
 - [ ] Ansible 자동화 연동
@@ -497,6 +497,11 @@ gantt
 
 ## Changelog
 
+- 2026-02-04: Phase 2 확장 기능 구현
+  - 알림 시스템 (Slack/Teams/InApp)
+  - Prometheus Alertmanager 어댑터
+  - 터미널 로그 수집 강화 (명령어 파싱, 태깅, 검색)
+  - AI 기반 유사 티켓 추천 (키워드 기반)
 - 2026-02-04: kecp-sso 연동 및 배포 환경 개선
   - compose.yml을 kecp-sso 네트워크에 연결
   - Backend: Keycloak JWT 검증 및 사용자 자동 동기화

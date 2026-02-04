@@ -71,6 +71,21 @@ kohub:
     termix:
       enabled: ${TERMIX_ENABLED:false}
       base-url: ${TERMIX_URL:http://localhost:8080}
+    
+    prometheus:
+      enabled: ${PROMETHEUS_ENABLED:false}
+      base-url: ${PROMETHEUS_URL:http://localhost:9090}
+      alertmanager-url: ${ALERTMANAGER_URL:http://localhost:9093}
+
+  notification:
+    slack:
+      enabled: ${SLACK_ENABLED:false}
+      webhook-url: ${SLACK_WEBHOOK_URL:}
+      default-channel: ${SLACK_CHANNEL:#kohub-alerts}
+    
+    teams:
+      enabled: ${TEAMS_ENABLED:false}
+      webhook-url: ${TEAMS_WEBHOOK_URL:}
 
 ---
 # 개발 환경
