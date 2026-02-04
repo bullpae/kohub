@@ -89,13 +89,18 @@ kohub/
 
 ## Quick Start (Local Dev)
 
-### Docker/Podman 실행
+### kecp-sso + kohub 통합 실행
 ```bash
-# 개발 환경 실행
-docker compose up -d
-
-# 또는 Podman
+# 1. kecp-sso 먼저 시작 (Keycloak SSO)
+cd ../kecp-sso
 podman-compose up -d
+
+# 2. kohub 시작
+cd ../kohub
+podman-compose up -d
+
+# 또는 한번에 실행
+./scripts/start-dev.sh
 ```
 
 ### 포트 정보
@@ -104,7 +109,13 @@ podman-compose up -d
 | DB | 5434 | PostgreSQL |
 | Backend | 8082 | Spring Boot API |
 | Frontend | 3002 | React Dev Server |
-| Keycloak | 8083 | SSO 서버 |
+| Keycloak | 8180 | SSO 서버 (kecp-sso) |
+
+### 인증 모드
+| 모드 | 환경변수 | 설명 |
+|------|----------|------|
+| 개발 (Mock) | `VITE_SSO_ENABLED=false` | 인증 없이 Mock 사용자로 개발 |
+| SSO | `VITE_SSO_ENABLED=true` | kecp-sso (Keycloak) 인증 사용 |
 
 ### Health Check
 - Backend: `GET http://localhost:8082/actuator/health`
@@ -434,7 +445,7 @@ gantt
     AI 파인튜닝           :p3-4, after p3-3, 5d
 ```
 
-### Phase 1: MVP ✅
+### Phase 1: MVP ✅ (완료)
 - [x] 프로젝트 초기 구조
 - [x] Host CRUD (API + UI)
 - [x] Ticket CRUD + 상태 관리
@@ -446,7 +457,8 @@ gantt
 - [x] 기본 대시보드 UI
 - [x] PostgreSQL 통일 (H2 제거)
 - [x] Flyway 마이그레이션
-- [ ] Keycloak 실제 연동 (현재 Mock)
+- [x] kecp-sso 연동 (Keycloak SSO)
+- [x] podman-compose 배포 환경
 
 ### Phase 2: 확장
 - [ ] AI 추천 (RAG 기반)
@@ -485,6 +497,13 @@ gantt
 
 ## Changelog
 
+- 2026-02-04: kecp-sso 연동 및 배포 환경 개선
+  - compose.yml을 kecp-sso 네트워크에 연결
+  - Backend: Keycloak JWT 검증 및 사용자 자동 동기화
+  - Frontend: OIDC 연동 (react-oidc-context)
+  - SSO 활성화/비활성화 환경변수 제어
+  - 개발 환경 시작 스크립트 추가 (scripts/start-dev.sh)
+  - **Phase 1 MVP 완료**
 - 2026-02-04: 외부 도구 연동 인프라 완성
   - PostgreSQL로 모든 환경 통일 (H2 제거)
   - HostAdapter 도메인 (외부 도구 ↔ 호스트 매핑)
