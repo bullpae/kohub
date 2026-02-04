@@ -436,12 +436,14 @@ gantt
 
 ### Phase 1: MVP
 - [x] 프로젝트 초기 구조
-- [ ] Host CRUD
-- [ ] Ticket CRUD + 상태 관리
-- [ ] Keycloak 연동
-- [ ] Uptime Kuma Webhook 어댑터
-- [ ] Termix iframe 연동
-- [ ] 기본 대시보드
+- [x] Host CRUD (API + UI)
+- [x] Ticket CRUD + 상태 관리
+- [x] User/Organization 도메인
+- [x] Dashboard 통합 API
+- [x] Uptime Kuma Webhook 어댑터
+- [x] Termix 터미널 연동 (URL 생성)
+- [x] 기본 대시보드 UI
+- [ ] Keycloak 실제 연동 (현재 Mock)
 
 ### Phase 2: 확장
 - [ ] AI 추천 (RAG 기반)
@@ -480,6 +482,12 @@ gantt
 
 ## Changelog
 
+- 2026-02-04: Phase 1 핵심 기능 구현
+  - Host/Ticket CRUD 완료
+  - User/Organization 도메인 추가
+  - Dashboard 통합 API
+  - Uptime Kuma/Termix 어댑터
+  - K-ECP 통합 디자인 시스템 적용
 - 2026-01-30: KustHub 연계 설계 문서 추가 (06_integration_design.md)
   - 세부 도메인 모델 설계
   - 이벤트 기반 연계 아키텍처
