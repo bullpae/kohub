@@ -49,9 +49,9 @@ public interface HostRepository extends JpaRepository<Host, UUID> {
      */
     @Query("SELECT new map(" +
            "COUNT(h) as total, " +
-           "SUM(CASE WHEN h.status = 'ACTIVE' THEN 1 ELSE 0 END) as active, " +
-           "SUM(CASE WHEN h.status = 'INACTIVE' THEN 1 ELSE 0 END) as inactive, " +
-           "SUM(CASE WHEN h.status = 'MAINTENANCE' THEN 1 ELSE 0 END) as maintenance) " +
+           "SUM(CASE WHEN h.status = com.kohub.domain.host.entity.HostStatus.ACTIVE THEN 1 ELSE 0 END) as active, " +
+           "SUM(CASE WHEN h.status = com.kohub.domain.host.entity.HostStatus.INACTIVE THEN 1 ELSE 0 END) as inactive, " +
+           "SUM(CASE WHEN h.status = com.kohub.domain.host.entity.HostStatus.MAINTENANCE THEN 1 ELSE 0 END) as maintenance) " +
            "FROM Host h")
     java.util.Map<String, Long> getStats();
 

@@ -55,14 +55,14 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
      */
     @Query("SELECT new map(" +
            "COUNT(t) as total, " +
-           "SUM(CASE WHEN t.status = 'NEW' THEN 1 ELSE 0 END) as newCount, " +
-           "SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) as inProgress, " +
-           "SUM(CASE WHEN t.status = 'PENDING' THEN 1 ELSE 0 END) as pending, " +
-           "SUM(CASE WHEN t.status = 'RESOLVED' THEN 1 ELSE 0 END) as resolved, " +
-           "SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed, " +
-           "SUM(CASE WHEN t.status = 'CLOSED' THEN 1 ELSE 0 END) as closed, " +
-           "SUM(CASE WHEN t.priority = 'CRITICAL' THEN 1 ELSE 0 END) as critical, " +
-           "SUM(CASE WHEN t.priority = 'HIGH' THEN 1 ELSE 0 END) as high) " +
+           "SUM(CASE WHEN t.status = com.kohub.domain.ticket.entity.TicketStatus.NEW THEN 1 ELSE 0 END) as newCount, " +
+           "SUM(CASE WHEN t.status = com.kohub.domain.ticket.entity.TicketStatus.IN_PROGRESS THEN 1 ELSE 0 END) as inProgress, " +
+           "SUM(CASE WHEN t.status = com.kohub.domain.ticket.entity.TicketStatus.PENDING THEN 1 ELSE 0 END) as pending, " +
+           "SUM(CASE WHEN t.status = com.kohub.domain.ticket.entity.TicketStatus.RESOLVED THEN 1 ELSE 0 END) as resolved, " +
+           "SUM(CASE WHEN t.status = com.kohub.domain.ticket.entity.TicketStatus.COMPLETED THEN 1 ELSE 0 END) as completed, " +
+           "SUM(CASE WHEN t.status = com.kohub.domain.ticket.entity.TicketStatus.CLOSED THEN 1 ELSE 0 END) as closed, " +
+           "SUM(CASE WHEN t.priority = com.kohub.domain.ticket.entity.TicketPriority.CRITICAL THEN 1 ELSE 0 END) as critical, " +
+           "SUM(CASE WHEN t.priority = com.kohub.domain.ticket.entity.TicketPriority.HIGH THEN 1 ELSE 0 END) as high) " +
            "FROM Ticket t")
     java.util.Map<String, Long> getStats();
 
@@ -90,8 +90,11 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     /**
      * 미완료 티켓 (CLOSED 제외)
      */
-    @Query("SELECT t FROM Ticket t WHERE t.status NOT IN ('CLOSED', 'COMPLETED') ORDER BY " +
-           "CASE t.priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END, " +
+    @Query("SELECT t FROM Ticket t WHERE t.status NOT IN (com.kohub.domain.ticket.entity.TicketStatus.CLOSED, com.kohub.domain.ticket.entity.TicketStatus.COMPLETED) ORDER BY " +
+           "CASE t.priority " +
+           "WHEN com.kohub.domain.ticket.entity.TicketPriority.CRITICAL THEN 1 " +
+           "WHEN com.kohub.domain.ticket.entity.TicketPriority.HIGH THEN 2 " +
+           "WHEN com.kohub.domain.ticket.entity.TicketPriority.MEDIUM THEN 3 ELSE 4 END, " +
            "t.createdAt DESC")
     Page<Ticket> findOpenTickets(Pageable pageable);
 }
