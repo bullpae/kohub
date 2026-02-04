@@ -434,15 +434,18 @@ gantt
     AI 파인튜닝           :p3-4, after p3-3, 5d
 ```
 
-### Phase 1: MVP
+### Phase 1: MVP ✅
 - [x] 프로젝트 초기 구조
 - [x] Host CRUD (API + UI)
 - [x] Ticket CRUD + 상태 관리
 - [x] User/Organization 도메인
 - [x] Dashboard 통합 API
-- [x] Uptime Kuma Webhook 어댑터
-- [x] Termix 터미널 연동 (URL 생성)
+- [x] HostAdapter 도메인 (외부 도구 매핑)
+- [x] Uptime Kuma Webhook 어댑터 + 호스트 자동 매핑
+- [x] Termix 터미널 연동 (URL 생성 + 세션 로그 저장)
 - [x] 기본 대시보드 UI
+- [x] PostgreSQL 통일 (H2 제거)
+- [x] Flyway 마이그레이션
 - [ ] Keycloak 실제 연동 (현재 Mock)
 
 ### Phase 2: 확장
@@ -482,6 +485,12 @@ gantt
 
 ## Changelog
 
+- 2026-02-04: 외부 도구 연동 인프라 완성
+  - PostgreSQL로 모든 환경 통일 (H2 제거)
+  - HostAdapter 도메인 (외부 도구 ↔ 호스트 매핑)
+  - Uptime Kuma Monitor → Host 자동 매핑
+  - TerminalLog 영구 저장 (세션 로그 수집)
+  - 호스트 상세 UI에 연동 도구 표시
 - 2026-02-04: Phase 1 핵심 기능 구현
   - Host/Ticket CRUD 완료
   - User/Organization 도메인 추가
