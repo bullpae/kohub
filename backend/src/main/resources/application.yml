@@ -106,6 +106,39 @@ logging:
     org.flywaydb: DEBUG
 
 ---
+# SSO 환경 (개발+인증, kecp-sso 연동)
+spring:
+  config:
+    activate:
+      on-profile: sso
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/kohub
+    username: kohub
+    password: kohub123
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/k-ecp}
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/k-ecp/protocol/openid-connect/certs
+
+logging:
+  level:
+    com.kohub: DEBUG
+    org.springframework.security: DEBUG
+
+---
 # 운영 환경
 spring:
   config:
@@ -125,6 +158,13 @@ spring:
 
   flyway:
     enabled: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/k-ecp/protocol/openid-connect/certs
 
 logging:
   level:

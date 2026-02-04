@@ -120,26 +120,75 @@ flowchart LR
 git clone https://github.com/bullpae/kohub.git
 cd kohub
 
-# 개발 환경 실행
-docker compose up -d
-
-# 또는 Podman
+# 1. kecp-sso 먼저 시작 (Keycloak 인증)
+cd ../kecp-sso
 podman-compose up -d
+
+# 2. kohub 시작
+cd ../kohub
+podman-compose up -d
+
+# 또는 한번에 실행
+./scripts/start-dev.sh
 ```
 
 ### 포트 정보
+
+```mermaid
+flowchart LR
+    subgraph kohub
+        FE[Frontend<br/>:3002]
+        BE[Backend<br/>:8082]
+        DB[(PostgreSQL<br/>:5434)]
+    end
+    
+    subgraph kecp-sso
+        KC[Keycloak<br/>:8180]
+        KCDB[(KC-DB<br/>:5432)]
+    end
+    
+    FE --> BE
+    BE --> DB
+    BE --> KC
+    FE -.->|OIDC| KC
+    KC --> KCDB
+```
 
 | 서비스 | 포트 | 설명 |
 |--------|------|------|
 | Frontend | 3002 | React Dev Server |
 | Backend | 8082 | Spring Boot API |
 | Database | 5434 | PostgreSQL |
+| Keycloak | 8180 | SSO 인증 (kecp-sso) |
 
 ### 접속
 
 - Frontend: http://localhost:3002
 - Backend API: http://localhost:8082/api/v1
 - API 문서: http://localhost:8082/swagger-ui.html
+- Keycloak Admin: http://localhost:8180/admin (admin/admin123)
+
+### 인증 모드
+
+```mermaid
+flowchart TB
+    subgraph Dev["개발 모드 (기본)"]
+        M1[VITE_SSO_ENABLED=false]
+        M2[Mock 인증 사용]
+    end
+    
+    subgraph SSO["SSO 모드"]
+        S1[VITE_SSO_ENABLED=true]
+        S2[Keycloak OIDC 사용]
+    end
+    
+    Dev -.->|"환경변수 변경"| SSO
+```
+
+| 모드 | 환경변수 | 설명 |
+|------|----------|------|
+| 개발 (Mock) | `VITE_SSO_ENABLED=false` | 인증 없이 Mock 사용자로 개발 |
+| SSO | `VITE_SSO_ENABLED=true` | kecp-sso (Keycloak) 인증 사용 |
 
 ## 프로젝트 구조
 
@@ -219,16 +268,20 @@ npm run build
 timeline
     title kohub 개발 로드맵
     
-    section Phase 1 - MVP
+    section Phase 1 - MVP ✅
         프로젝트 초기화 : 완료
-        Host/Ticket CRUD : 진행중
-        Keycloak 연동 : 예정
-        어댑터 연동 : 예정
+        Host/Ticket CRUD : 완료
+        User/Organization : 완료
+        Dashboard 통합 API : 완료
+        Keycloak SSO 연동 : 완료
+        Uptime Kuma 어댑터 : 완료
+        Termix 터미널 연동 : 완료
+        PostgreSQL 통일 : 완료
     
     section Phase 2 - 확장
         AI 추천 (RAG) : 예정
-        Prometheus : 예정
-        Slack 알림 : 예정
+        Prometheus 연동 : 예정
+        Slack/Teams 알림 : 예정
     
     section Phase 3 - 고도화
         Ansible 자동화 : 예정

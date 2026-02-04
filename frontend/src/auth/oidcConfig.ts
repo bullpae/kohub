@@ -1,17 +1,10 @@
+import { WebStorageStateStore } from 'oidc-client-ts'
+
 /**
- * OIDC (Keycloak) 설정
- * 
- * 환경 변수:
- * - VITE_KEYCLOAK_URL: Keycloak 서버 URL
- * - VITE_KEYCLOAK_REALM: Realm 이름
- * - VITE_KEYCLOAK_CLIENT_ID: Client ID
- * - VITE_SSO_ENABLED: SSO 활성화 여부
+ * OIDC 설정 (Keycloak k-ecp-kohub 클라이언트)
  */
-
-import type { AuthProviderProps } from 'react-oidc-context';
-
-export const oidcConfig: AuthProviderProps = {
-  authority: `${import.meta.env.VITE_KEYCLOAK_URL}/realms/${import.meta.env.VITE_KEYCLOAK_REALM}`,
+export const oidcConfig = {
+  authority: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}`,
   client_id: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'k-ecp-kohub',
   redirect_uri: `${window.location.origin}/callback`,
   post_logout_redirect_uri: window.location.origin,
@@ -19,11 +12,25 @@ export const oidcConfig: AuthProviderProps = {
   scope: 'openid profile email',
   automaticSilentRenew: true,
   loadUserInfo: true,
-};
+  userStore: new WebStorageStateStore({ store: window.localStorage }),
+  
+  // Keycloak 특화 설정
+  metadata: {
+    issuer: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}`,
+    authorization_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/auth`,
+    token_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/token`,
+    userinfo_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/userinfo`,
+    end_session_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/logout`,
+    jwks_uri: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/certs`,
+  },
+}
 
 /**
- * SSO 활성화 여부
+ * SSO 활성화 여부 (환경변수로 제어)
  */
-export const isSSOEnabled = (): boolean => {
-  return import.meta.env.VITE_SSO_ENABLED === 'true';
-};
+export function isSSOEnabled(): boolean {
+  return import.meta.env.VITE_SSO_ENABLED === 'true'
+}
+
+// 별칭 (호환성)
+export const isSsoEnabled = isSSOEnabled()

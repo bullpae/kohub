@@ -1,7 +1,12 @@
 # ================================
 # kohub 개발 환경 (Docker/Podman Compose)
-# 사용법: podman-compose up -d
-# 포트: DB=5434, Backend=8082, Frontend=5000
+# 
+# 사용법:
+#   1. kecp-sso 먼저 실행: cd ../kecp-sso && podman-compose up -d
+#   2. kohub 실행: podman-compose up -d
+#
+# 포트: DB=5434, Backend=8082, Frontend=3002
+# 인증: kecp-sso (Keycloak :8180) 사용
 # ================================
 
 services:
@@ -17,6 +22,8 @@ services:
       - "5434:5432"
     volumes:
       - kohub-db-data:/var/lib/postgresql/data
+    networks:
+      - kohub-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kohub} -d ${POSTGRES_DB:-kohub}"]
       interval: 10s
@@ -32,14 +39,25 @@ services:
     container_name: kohub-backend
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      # Database
       DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-kohub}
       DB_USER: ${POSTGRES_USER:-kohub}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-kohub123}
-      DB_DRIVER: org.postgresql.Driver
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/kohub
-      CORS_ORIGINS: http://localhost:5000
+      # Keycloak SSO (kecp-sso 네트워크의 keycloak 컨테이너)
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_URL:-http://keycloak:8080}/realms/k-ecp
+      # CORS (프론트엔드 허용)
+      CORS_ORIGINS: http://localhost:3002
+      # Adapters
+      UPTIME_KUMA_ENABLED: ${UPTIME_KUMA_ENABLED:-false}
+      UPTIME_KUMA_URL: ${UPTIME_KUMA_URL:-http://localhost:3001}
+      TERMIX_ENABLED: ${TERMIX_ENABLED:-false}
+      TERMIX_URL: ${TERMIX_URL:-http://localhost:8080}
     ports:
       - "8082:8080"
+    networks:
+      - kohub-network
+      - kecp-sso-network  # kecp-sso 네트워크 연결
     depends_on:
       db:
         condition: service_healthy
@@ -50,17 +68,32 @@ services:
     image: docker.io/node:20-alpine
     container_name: kohub-frontend
     working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3002"
     ports:
-      - "5000:5000"
+      - "3002:3002"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8082/api/v1
+      # API
+      VITE_API_URL: http://localhost:8082/api/v1
+      # Keycloak SSO (브라우저에서 접근하므로 localhost 사용)
+      VITE_KEYCLOAK_URL: ${KEYCLOAK_EXTERNAL_URL:-http://localhost:8180}
+      VITE_KEYCLOAK_REALM: k-ecp
+      VITE_KEYCLOAK_CLIENT_ID: k-ecp-kohub
+    networks:
+      - kohub-network
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
   kohub-db-data:
+
+networks:
+  kohub-network:
+    driver: bridge
+  # kecp-sso 네트워크 (외부 네트워크로 연결)
+  kecp-sso-network:
+    external: true
+    name: kecp-sso_kecp-sso-network
