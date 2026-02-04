@@ -473,6 +473,14 @@ gantt
 - [Uptime Kuma](https://github.com/louislam/uptime-kuma)
 - [Termix](https://github.com/Termix-SSH/Termix)
 - [Keycloak](https://www.keycloak.org/)
-- [KustHub](../KustHub) - 참고 프로젝트
+- [KustHub](../KustHub) - 고객 커뮤니케이션 허브 (연계 대상)
 - [StockHub](../StockHub) - 참고 프로젝트
 - [UI/UX 설계](./docs/05_ux_design.md)
+- [KustHub 연계 설계](./docs/06_integration_design.md)
+
+## Changelog
+
+- 2026-01-30: KustHub 연계 설계 문서 추가 (06_integration_design.md)
+  - 세부 도메인 모델 설계
+  - 이벤트 기반 연계 아키텍처
+  - API 설계 상세

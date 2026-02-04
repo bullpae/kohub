@@ -244,6 +244,7 @@ timeline
 - [docs/03_api_design.md](./docs/03_api_design.md) - API 설계
 - [docs/04_adapter_spec.md](./docs/04_adapter_spec.md) - 어댑터 명세
 - [docs/05_ux_design.md](./docs/05_ux_design.md) - UI/UX 설계
+- [docs/06_integration_design.md](./docs/06_integration_design.md) - KustHub 연계 설계
 
 ## 기여
 
