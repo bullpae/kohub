@@ -4,6 +4,7 @@ import com.kohub.common.response.ApiResponse;
 import com.kohub.common.response.PageResponse;
 import com.kohub.domain.host.dto.HostRequest;
 import com.kohub.domain.host.dto.HostResponse;
+import com.kohub.domain.host.dto.HostStatsResponse;
 import com.kohub.domain.host.entity.HostStatus;
 import com.kohub.domain.host.service.HostService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -84,8 +85,8 @@ public class HostController {
 
     @GetMapping("/stats")
     @Operation(summary = "호스트 통계", description = "호스트 상태별 통계를 조회합니다")
-    public ResponseEntity<ApiResponse<HostService.HostStats>> getStats() {
-        HostService.HostStats stats = hostService.getStats();
+    public ResponseEntity<ApiResponse<HostStatsResponse>> getStats() {
+        HostStatsResponse stats = hostService.getStats();
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }

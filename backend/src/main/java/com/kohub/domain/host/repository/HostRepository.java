@@ -45,6 +45,17 @@ public interface HostRepository extends JpaRepository<Host, UUID> {
     long countByStatus(HostStatus status);
 
     /**
+     * 전체 통계 조회 (단일 쿼리)
+     */
+    @Query("SELECT new map(" +
+           "COUNT(h) as total, " +
+           "SUM(CASE WHEN h.status = 'ACTIVE' THEN 1 ELSE 0 END) as active, " +
+           "SUM(CASE WHEN h.status = 'INACTIVE' THEN 1 ELSE 0 END) as inactive, " +
+           "SUM(CASE WHEN h.status = 'MAINTENANCE' THEN 1 ELSE 0 END) as maintenance) " +
+           "FROM Host h")
+    java.util.Map<String, Long> getStats();
+
+    /**
      * 검색 (이름, 설명, 태그)
      */
     @Query("SELECT h FROM Host h WHERE " +

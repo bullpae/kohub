@@ -5,6 +5,7 @@ import com.kohub.common.response.PageResponse;
 import com.kohub.domain.ticket.dto.TicketDetailResponse;
 import com.kohub.domain.ticket.dto.TicketRequest;
 import com.kohub.domain.ticket.dto.TicketResponse;
+import com.kohub.domain.ticket.dto.TicketStatsResponse;
 import com.kohub.domain.ticket.entity.TicketPriority;
 import com.kohub.domain.ticket.entity.TicketStatus;
 import com.kohub.domain.ticket.service.TicketService;
@@ -136,8 +137,8 @@ public class TicketController {
 
     @GetMapping("/stats")
     @Operation(summary = "티켓 통계", description = "티켓 상태별/우선순위별 통계를 조회합니다")
-    public ResponseEntity<ApiResponse<TicketService.TicketStats>> getStats() {
-        TicketService.TicketStats stats = ticketService.getStats();
+    public ResponseEntity<ApiResponse<TicketStatsResponse>> getStats() {
+        TicketStatsResponse stats = ticketService.getStats();
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }

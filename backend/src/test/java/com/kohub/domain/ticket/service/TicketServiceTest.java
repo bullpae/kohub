@@ -5,6 +5,10 @@ import com.kohub.common.exception.ErrorCode;
 import com.kohub.domain.ticket.dto.TicketDetailResponse;
 import com.kohub.domain.ticket.dto.TicketRequest;
 import com.kohub.domain.ticket.dto.TicketResponse;
+import com.kohub.domain.ticket.dto.TicketStatsResponse;
+
+import java.util.HashMap;
+import java.util.Map;
 import com.kohub.domain.ticket.entity.Ticket;
 import com.kohub.domain.ticket.entity.TicketPriority;
 import com.kohub.domain.ticket.entity.TicketSource;
@@ -293,24 +297,29 @@ class TicketServiceTest {
         @Test
         @DisplayName("티켓 통계 조회 - 성공")
         void testGetStats_Success() {
-            // given: 통계 데이터
-            given(ticketRepository.count()).willReturn(50L);
-            given(ticketRepository.countByStatus(TicketStatus.NEW)).willReturn(10L);
-            given(ticketRepository.countByStatus(TicketStatus.IN_PROGRESS)).willReturn(15L);
-            given(ticketRepository.countByStatus(TicketStatus.RESOLVED)).willReturn(20L);
-            given(ticketRepository.countByPriority(TicketPriority.CRITICAL)).willReturn(5L);
-            given(ticketRepository.countByPriority(TicketPriority.HIGH)).willReturn(10L);
+            // given: 통계 데이터 (단일 쿼리 결과)
+            Map<String, Long> statsMap = new HashMap<>();
+            statsMap.put("total", 50L);
+            statsMap.put("newCount", 10L);
+            statsMap.put("inProgress", 15L);
+            statsMap.put("pending", 5L);
+            statsMap.put("resolved", 20L);
+            statsMap.put("completed", 0L);
+            statsMap.put("closed", 0L);
+            statsMap.put("critical", 5L);
+            statsMap.put("high", 10L);
+            given(ticketRepository.getStats()).willReturn(statsMap);
 
             // when: 통계 조회
-            TicketService.TicketStats stats = ticketService.getStats();
+            TicketStatsResponse stats = ticketService.getStats();
 
             // then: 통계 검증
-            assertThat(stats.total()).isEqualTo(50L);
-            assertThat(stats.newCount()).isEqualTo(10L);
-            assertThat(stats.inProgress()).isEqualTo(15L);
-            assertThat(stats.resolved()).isEqualTo(20L);
-            assertThat(stats.critical()).isEqualTo(5L);
-            assertThat(stats.high()).isEqualTo(10L);
+            assertThat(stats.getTotal()).isEqualTo(50L);
+            assertThat(stats.getNewCount()).isEqualTo(10L);
+            assertThat(stats.getInProgress()).isEqualTo(15L);
+            assertThat(stats.getResolved()).isEqualTo(20L);
+            assertThat(stats.getCritical()).isEqualTo(5L);
+            assertThat(stats.getHigh()).isEqualTo(10L);
         }
     }
 }

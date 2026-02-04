@@ -4,6 +4,10 @@ import com.kohub.common.exception.BusinessException;
 import com.kohub.common.exception.ErrorCode;
 import com.kohub.domain.host.dto.HostRequest;
 import com.kohub.domain.host.dto.HostResponse;
+import com.kohub.domain.host.dto.HostStatsResponse;
+
+import java.util.HashMap;
+import java.util.Map;
 import com.kohub.domain.host.entity.ConnectionType;
 import com.kohub.domain.host.entity.Host;
 import com.kohub.domain.host.entity.HostStatus;
@@ -244,20 +248,22 @@ class HostServiceTest {
         @Test
         @DisplayName("호스트 통계 조회 - 성공")
         void testGetStats_Success() {
-            // given: 통계 데이터
-            given(hostRepository.count()).willReturn(10L);
-            given(hostRepository.countByStatus(HostStatus.ACTIVE)).willReturn(7L);
-            given(hostRepository.countByStatus(HostStatus.INACTIVE)).willReturn(2L);
-            given(hostRepository.countByStatus(HostStatus.MAINTENANCE)).willReturn(1L);
+            // given: 통계 데이터 (단일 쿼리 결과)
+            Map<String, Long> statsMap = new HashMap<>();
+            statsMap.put("total", 10L);
+            statsMap.put("active", 7L);
+            statsMap.put("inactive", 2L);
+            statsMap.put("maintenance", 1L);
+            given(hostRepository.getStats()).willReturn(statsMap);
 
             // when: 통계 조회
-            HostService.HostStats stats = hostService.getStats();
+            HostStatsResponse stats = hostService.getStats();
 
             // then: 통계 검증
-            assertThat(stats.total()).isEqualTo(10L);
-            assertThat(stats.active()).isEqualTo(7L);
-            assertThat(stats.inactive()).isEqualTo(2L);
-            assertThat(stats.maintenance()).isEqualTo(1L);
+            assertThat(stats.getTotal()).isEqualTo(10L);
+            assertThat(stats.getActive()).isEqualTo(7L);
+            assertThat(stats.getInactive()).isEqualTo(2L);
+            assertThat(stats.getMaintenance()).isEqualTo(1L);
         }
     }
 }

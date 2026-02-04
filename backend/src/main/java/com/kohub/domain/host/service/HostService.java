@@ -4,6 +4,7 @@ import com.kohub.common.exception.BusinessException;
 import com.kohub.common.exception.ErrorCode;
 import com.kohub.domain.host.dto.HostRequest;
 import com.kohub.domain.host.dto.HostResponse;
+import com.kohub.domain.host.dto.HostStatsResponse;
 import com.kohub.domain.host.entity.Host;
 import com.kohub.domain.host.entity.HostStatus;
 import com.kohub.domain.host.repository.HostRepository;
@@ -116,24 +117,24 @@ public class HostService {
     }
 
     /**
-     * 호스트 통계
+     * 호스트 통계 (단일 쿼리 최적화)
      */
-    public HostStats getStats() {
-        long active = hostRepository.countByStatus(HostStatus.ACTIVE);
-        long inactive = hostRepository.countByStatus(HostStatus.INACTIVE);
-        long maintenance = hostRepository.countByStatus(HostStatus.MAINTENANCE);
-        long total = hostRepository.count();
-
-        return new HostStats(total, active, inactive, maintenance);
+    public HostStatsResponse getStats() {
+        var stats = hostRepository.getStats();
+        return HostStatsResponse.of(
+                toLong(stats.get("total")),
+                toLong(stats.get("active")),
+                toLong(stats.get("inactive")),
+                toLong(stats.get("maintenance"))
+        );
     }
 
     private Host findHostById(UUID id) {
         return hostRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HOST_NOT_FOUND));
     }
-
-    /**
-     * 호스트 통계 DTO
-     */
-    public record HostStats(long total, long active, long inactive, long maintenance) {}
+    
+    private long toLong(Object value) {
+        return value == null ? 0L : ((Number) value).longValue();
+    }
 }

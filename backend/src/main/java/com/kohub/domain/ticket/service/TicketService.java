@@ -5,6 +5,7 @@ import com.kohub.common.exception.ErrorCode;
 import com.kohub.domain.ticket.dto.TicketDetailResponse;
 import com.kohub.domain.ticket.dto.TicketRequest;
 import com.kohub.domain.ticket.dto.TicketResponse;
+import com.kohub.domain.ticket.dto.TicketStatsResponse;
 import com.kohub.domain.ticket.entity.Ticket;
 import com.kohub.domain.ticket.entity.TicketPriority;
 import com.kohub.domain.ticket.entity.TicketStatus;
@@ -159,33 +160,29 @@ public class TicketService {
     }
 
     /**
-     * 티켓 통계
+     * 티켓 통계 (단일 쿼리 최적화)
      */
-    public TicketStats getStats() {
-        long total = ticketRepository.count();
-        long newCount = ticketRepository.countByStatus(TicketStatus.NEW);
-        long inProgress = ticketRepository.countByStatus(TicketStatus.IN_PROGRESS);
-        long resolved = ticketRepository.countByStatus(TicketStatus.RESOLVED);
-        long critical = ticketRepository.countByPriority(TicketPriority.CRITICAL);
-        long high = ticketRepository.countByPriority(TicketPriority.HIGH);
-
-        return new TicketStats(total, newCount, inProgress, resolved, critical, high);
+    public TicketStatsResponse getStats() {
+        var stats = ticketRepository.getStats();
+        return TicketStatsResponse.of(
+                toLong(stats.get("total")),
+                toLong(stats.get("newCount")),
+                toLong(stats.get("inProgress")),
+                toLong(stats.get("pending")),
+                toLong(stats.get("resolved")),
+                toLong(stats.get("completed")),
+                toLong(stats.get("closed")),
+                toLong(stats.get("critical")),
+                toLong(stats.get("high"))
+        );
     }
 
     private Ticket findTicketById(UUID id) {
         return ticketRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TICKET_NOT_FOUND));
     }
-
-    /**
-     * 티켓 통계 DTO
-     */
-    public record TicketStats(
-            long total, 
-            long newCount, 
-            long inProgress, 
-            long resolved, 
-            long critical, 
-            long high
-    ) {}
+    
+    private long toLong(Object value) {
+        return value == null ? 0L : ((Number) value).longValue();
+    }
 }

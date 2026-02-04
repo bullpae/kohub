@@ -51,6 +51,22 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     long countByPriority(TicketPriority priority);
 
     /**
+     * 전체 통계 조회 (단일 쿼리)
+     */
+    @Query("SELECT new map(" +
+           "COUNT(t) as total, " +
+           "SUM(CASE WHEN t.status = 'NEW' THEN 1 ELSE 0 END) as newCount, " +
+           "SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) as inProgress, " +
+           "SUM(CASE WHEN t.status = 'PENDING' THEN 1 ELSE 0 END) as pending, " +
+           "SUM(CASE WHEN t.status = 'RESOLVED' THEN 1 ELSE 0 END) as resolved, " +
+           "SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed, " +
+           "SUM(CASE WHEN t.status = 'CLOSED' THEN 1 ELSE 0 END) as closed, " +
+           "SUM(CASE WHEN t.priority = 'CRITICAL' THEN 1 ELSE 0 END) as critical, " +
+           "SUM(CASE WHEN t.priority = 'HIGH' THEN 1 ELSE 0 END) as high) " +
+           "FROM Ticket t")
+    java.util.Map<String, Long> getStats();
+
+    /**
      * 호스트별 티켓 목록
      */
     Page<Ticket> findByHostId(UUID hostId, Pageable pageable);
