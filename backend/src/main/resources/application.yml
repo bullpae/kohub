@@ -5,11 +5,16 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+  # PostgreSQL 통일 (모든 환경)
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:kohub;DB_CLOSE_DELAY=-1}
-    username: ${DB_USER:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/kohub}
+    username: ${DB_USER:kohub}
+    password: ${DB_PASSWORD:kohub123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
 
   jpa:
     hibernate:
@@ -19,6 +24,7 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 100
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
     enabled: true
@@ -30,11 +36,6 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/k-ecp}
-
-  h2:
-    console:
-      enabled: ${H2_CONSOLE_ENABLED:false}
-      path: /h2-console
 
 server:
   port: ${SERVER_PORT:8082}
@@ -79,20 +80,18 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:h2:mem:kohub;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
+    url: jdbc:postgresql://localhost:5434/kohub
+    username: kohub
+    password: kohub123
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
 
   flyway:
-    enabled: false
-
-  h2:
-    console:
-      enabled: true
+    enabled: true
+    clean-disabled: false
 
   security:
     oauth2:
@@ -104,6 +103,7 @@ logging:
   level:
     com.kohub: DEBUG
     org.springframework.security: DEBUG
+    org.flywaydb: DEBUG
 
 ---
 # 운영 환경

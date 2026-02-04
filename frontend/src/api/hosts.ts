@@ -110,3 +110,61 @@ export async function getHostStats(): Promise<HostStats> {
   const response = await apiClient.get<ApiResponse<HostStats>>('/api/v1/hosts/stats')
   return response.data.data
 }
+
+// 호스트 어댑터 타입
+export interface HostAdapter {
+  id: string
+  adapterType: string
+  externalId: string | null
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR'
+  lastSyncAt: string | null
+}
+
+export interface HostAdapterDetail extends HostAdapter {
+  hostId: string
+  hostName: string
+  config: Record<string, unknown>
+  errorMessage: string | null
+  createdAt: string
+}
+
+export interface HostAdapterRequest {
+  adapterType: string
+  externalId?: string
+  config?: Record<string, unknown>
+}
+
+// 호스트 어댑터 목록
+export async function getHostAdapters(hostId: string): Promise<HostAdapter[]> {
+  const response = await apiClient.get<ApiResponse<HostAdapter[]>>(`/api/v1/hosts/${hostId}/adapters`)
+  return response.data.data
+}
+
+// 호스트 어댑터 생성
+export async function createHostAdapter(hostId: string, request: HostAdapterRequest): Promise<HostAdapterDetail> {
+  const response = await apiClient.post<ApiResponse<HostAdapterDetail>>(`/api/v1/hosts/${hostId}/adapters`, request)
+  return response.data.data
+}
+
+// 호스트 어댑터 삭제
+export async function deleteHostAdapter(hostId: string, adapterId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/hosts/${hostId}/adapters/${adapterId}`)
+}
+
+// 터미널 URL
+export interface TerminalUrl {
+  url: string
+  sessionId: string
+  hostId: string
+  hostName: string
+  sshHost: string
+  sshPort: number
+  sshUser: string
+}
+
+export async function getTerminalUrl(hostId: string, ticketId?: string): Promise<TerminalUrl> {
+  const response = await apiClient.get<ApiResponse<TerminalUrl>>(`/api/v1/hosts/${hostId}/terminal/url`, {
+    params: ticketId ? { ticketId } : {}
+  })
+  return response.data.data
+}
