@@ -3,15 +3,15 @@ import axios from 'axios'
 /**
  * API 클라이언트
  */
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '',
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
 // 요청 인터셉터 (인증 토큰 추가)
-api.interceptors.request.use((config) => {
+apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -20,7 +20,7 @@ api.interceptors.request.use((config) => {
 })
 
 // 응답 인터셉터 (에러 처리)
-api.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
@@ -31,3 +31,6 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export { apiClient as api }
+export default apiClient
