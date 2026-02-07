@@ -17,6 +17,7 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showCurrentPw, setShowCurrentPw] = useState(false)
   const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -215,13 +216,20 @@ export default function Profile() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--kecp-gray-400)]" />
               <input
-                type={showNewPw ? 'text' : 'password'}
+                type={showConfirmPw ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="새 비밀번호를 다시 입력하세요"
-                className="w-full pl-10 pr-4 py-3 border border-[var(--kecp-gray-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--kecp-primary)] focus:border-transparent text-sm"
+                className="w-full pl-10 pr-12 py-3 border border-[var(--kecp-gray-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--kecp-primary)] focus:border-transparent text-sm"
                 autoComplete="new-password"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPw(!showConfirmPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--kecp-gray-400)] hover:text-[var(--kecp-gray-600)]"
+              >
+                {showConfirmPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
             {confirmPassword && newPassword !== confirmPassword && (
               <p className="mt-1 text-xs text-red-500">비밀번호가 일치하지 않습니다.</p>
