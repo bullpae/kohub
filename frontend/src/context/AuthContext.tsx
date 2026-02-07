@@ -47,6 +47,7 @@ interface JwtPayload {
 // AuthContext 타입
 interface User {
   id: string
+  username: string
   name: string
   email: string
   role: string
@@ -86,6 +87,7 @@ function extractUserFromToken(token: string): User | null {
 
     return {
       id: decoded.sub || '',
+      username: decoded.preferred_username || '',
       name: decoded.name || decoded.preferred_username || '',
       email: decoded.email || '',
       role,

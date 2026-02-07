@@ -62,7 +62,7 @@ export default function Profile() {
 
     setLoading(true)
     try {
-      const username = currentUser?.email || currentUser?.name || ''
+      const username = currentUser?.username || ''
       const response = await changePassword(username, currentPassword, newPassword)
       if (response.success) {
         setSuccess('비밀번호가 변경되었습니다.')
