@@ -57,6 +57,18 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
 
+# SSO 인증 설정 (기본: 비활성화)
+sso:
+  enabled: ${SSO_ENABLED:false}
+
+# Keycloak 설정
+keycloak:
+  admin:
+    server-url: ${KEYCLOAK_URL:http://localhost:8180}
+  target-realm: ${KEYCLOAK_REALM:k-ecp}
+  client-id: ${KEYCLOAK_CLIENT_ID:k-ecp-kohub}
+  issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/k-ecp}
+
 # 앱 설정
 kohub:
   cors:
@@ -148,6 +160,9 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/k-ecp}
           jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/k-ecp/protocol/openid-connect/certs
 
+sso:
+  enabled: true
+
 logging:
   level:
     com.kohub: DEBUG
@@ -180,6 +195,9 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI}
           jwk-set-uri: ${KEYCLOAK_URL}/realms/k-ecp/protocol/openid-connect/certs
+
+sso:
+  enabled: true
 
 logging:
   level:

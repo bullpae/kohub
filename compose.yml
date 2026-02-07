@@ -46,6 +46,8 @@ services:
       # Keycloak SSO (kecp-sso 네트워크의 keycloak 컨테이너)
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_URL:-http://keycloak:8080}/realms/k-ecp
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-k-ecp-kohub}
+      SSO_ENABLED: ${SSO_ENABLED:-true}
       # CORS (프론트엔드 허용)
       CORS_ORIGINS: http://localhost:3002
       # Adapters
@@ -76,7 +78,7 @@ services:
       - /app/node_modules
     environment:
       # API
-      VITE_API_URL: http://localhost:8082/api/v1
+      VITE_API_URL: http://localhost:8082
       # Keycloak SSO (브라우저에서 접근하므로 localhost 사용)
       VITE_KEYCLOAK_URL: ${KEYCLOAK_EXTERNAL_URL:-http://localhost:8180}
       VITE_KEYCLOAK_REALM: k-ecp

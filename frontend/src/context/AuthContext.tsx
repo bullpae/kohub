@@ -1,12 +1,18 @@
-import { createContext, useContext, useMemo, useState, ReactNode } from 'react';
-import { useAuth as useOIDCAuth } from 'react-oidc-context';
-import { isSSOEnabled } from '../auth/oidcConfig';
+import { createContext, useContext, useMemo, useState, useCallback, useEffect, ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { loginUser, refreshAccessToken } from '../api/auth'
+import { jwtDecode } from 'jwt-decode'
+
+// localStorage 키
+const TOKEN_KEY = 'kohub_access_token'
+const REFRESH_KEY = 'kohub_refresh_token'
+const EXPIRES_KEY = 'kohub_token_expires_at'
 
 // 역할별 메뉴 설정
 interface MenuItem {
-  path: string;
-  label: string;
-  icon: string;
+  path: string
+  label: string
+  icon: string
 }
 
 const roleMenus: Record<string, MenuItem[]> = {
@@ -25,171 +31,196 @@ const roleMenus: Record<string, MenuItem[]> = {
     { path: '/', label: '대시보드', icon: 'LayoutDashboard' },
     { path: '/my-resources', label: '내 리소스', icon: 'Server' },
   ],
-};
+}
 
-// 개발용 Mock 사용자
-const mockUsers = [
-  { id: '1', name: '관리자', email: 'admin@kohub.io', role: 'admin', roleLabel: 'Admin' },
-  { id: '2', name: '운영자', email: 'operator@kohub.io', role: 'operator', roleLabel: 'Operator' },
-  { id: '3', name: '사용자', email: 'user@kohub.io', role: 'member', roleLabel: 'Member' },
-];
+// JWT 디코딩 결과 타입
+interface JwtPayload {
+  sub?: string
+  preferred_username?: string
+  name?: string
+  email?: string
+  realm_access?: { roles?: string[] }
+  resource_access?: Record<string, { roles?: string[] }>
+  exp?: number
+}
 
 // AuthContext 타입
 interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  roleLabel: string;
-  roles?: string[];
+  id: string
+  name: string
+  email: string
+  role: string
+  roleLabel: string
+  roles?: string[]
 }
 
 interface AuthContextType {
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  currentUser: User | null;
-  users: User[];
-  login: () => void;
-  logout: () => void;
-  switchUser: (userId: string) => void;
-  getMenus: () => MenuItem[];
-  isAdmin: () => boolean;
-  isOperator: () => boolean;
-  getAccessToken: () => string | null;
+  isLoading: boolean
+  isAuthenticated: boolean
+  currentUser: User | null
+  users: User[]
+  login: () => void
+  logout: () => void
+  switchUser: (userId: string) => void
+  loginWithCredentials: (username: string, password: string) => Promise<void>
+  getMenus: () => MenuItem[]
+  isAdmin: () => boolean
+  isOperator: () => boolean
+  getAccessToken: () => string | null
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null)
 
 /**
- * SSO 인증 Provider (Keycloak 연동)
+ * JWT 토큰에서 사용자 정보를 추출
  */
-function SSOAuthProvider({ children }: { children: ReactNode }) {
-  const oidcAuth = useOIDCAuth();
-
-  const value = useMemo<AuthContextType>(() => {
-    // 로딩 중
-    if (oidcAuth.isLoading) {
-      return {
-        isLoading: true,
-        isAuthenticated: false,
-        currentUser: null,
-        users: [],
-        login: () => {},
-        logout: () => {},
-        switchUser: () => {},
-        getMenus: () => [],
-        isAdmin: () => false,
-        isOperator: () => false,
-        getAccessToken: () => null,
-      };
-    }
-
-    // 인증되지 않음
-    if (!oidcAuth.isAuthenticated || !oidcAuth.user) {
-      return {
-        isLoading: false,
-        isAuthenticated: false,
-        currentUser: null,
-        users: [],
-        login: () => oidcAuth.signinRedirect(),
-        logout: () => {},
-        switchUser: () => {},
-        getMenus: () => roleMenus.member,
-        isAdmin: () => false,
-        isOperator: () => false,
-        getAccessToken: () => null,
-      };
-    }
-
-    // 인증됨 - Keycloak 토큰에서 사용자 정보 추출
-    const profile = oidcAuth.user.profile;
-    const realmAccess = profile?.realm_access as { roles?: string[] } | undefined;
-    const realmRoles = realmAccess?.roles || [];
+function extractUserFromToken(token: string): User | null {
+  try {
+    const decoded = jwtDecode<JwtPayload>(token)
+    const realmRoles = decoded.realm_access?.roles || []
 
     // Keycloak 역할 → 앱 역할 매핑
-    let role = 'member';
-    if (realmRoles.includes('admin')) role = 'admin';
-    else if (realmRoles.includes('operator')) role = 'operator';
+    let role = 'member'
+    if (realmRoles.includes('admin')) role = 'admin'
+    else if (realmRoles.includes('operator')) role = 'operator'
 
-    const currentUser: User = {
-      id: profile.sub || '',
-      email: profile.email || '',
-      name: profile.name || profile.preferred_username || '',
+    return {
+      id: decoded.sub || '',
+      name: decoded.name || decoded.preferred_username || '',
+      email: decoded.email || '',
       role,
       roleLabel: role.charAt(0).toUpperCase() + role.slice(1),
       roles: realmRoles,
-    };
-
-    return {
-      isLoading: false,
-      isAuthenticated: true,
-      currentUser,
-      users: [],
-      login: () => oidcAuth.signinRedirect(),
-      logout: () => oidcAuth.signoutRedirect(),
-      switchUser: () => {},
-      getMenus: () => roleMenus[role] || roleMenus.member,
-      isAdmin: () => realmRoles.includes('admin'),
-      isOperator: () => realmRoles.includes('operator') || realmRoles.includes('admin'),
-      getAccessToken: () => oidcAuth.user?.access_token || null,
-    };
-  }, [oidcAuth.isLoading, oidcAuth.isAuthenticated, oidcAuth.user]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-/**
- * Mock 인증 Provider (개발용)
- */
-function MockAuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User>(mockUsers[0]);
-
-  const switchUser = (userId: string) => {
-    const user = mockUsers.find(u => u.id === userId);
-    if (user) {
-      setCurrentUser(user);
     }
-  };
-
-  const value: AuthContextType = {
-    isLoading: false,
-    isAuthenticated: true,
-    currentUser,
-    users: mockUsers,
-    login: () => {},
-    logout: () => {},
-    switchUser,
-    getMenus: () => roleMenus[currentUser.role] || roleMenus.member,
-    isAdmin: () => currentUser.role === 'admin',
-    isOperator: () => ['admin', 'operator'].includes(currentUser.role),
-    getAccessToken: () => null,
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  } catch {
+    return null
+  }
 }
 
 /**
- * 통합 AuthProvider
+ * 토큰 기반 인증 Provider (자체 로그인)
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  if (isSSOEnabled()) {
-    return <SSOAuthProvider>{children}</SSOAuthProvider>;
-  }
-  return <MockAuthProvider>{children}</MockAuthProvider>;
+  const navigate = useNavigate()
+
+  const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
+  const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(REFRESH_KEY))
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<number>(() => {
+    const stored = localStorage.getItem(EXPIRES_KEY)
+    return stored ? parseInt(stored, 10) : 0
+  })
+  const [isLoading, setIsLoading] = useState(false)
+
+  // 토큰 저장
+  const saveTokens = useCallback((loginResponse: { accessToken: string; refreshToken: string; expiresIn: number }) => {
+    const expiresAt = Date.now() + loginResponse.expiresIn * 1000
+    localStorage.setItem(TOKEN_KEY, loginResponse.accessToken)
+    localStorage.setItem(REFRESH_KEY, loginResponse.refreshToken)
+    localStorage.setItem(EXPIRES_KEY, expiresAt.toString())
+    setAccessToken(loginResponse.accessToken)
+    setRefreshToken(loginResponse.refreshToken)
+    setTokenExpiresAt(expiresAt)
+  }, [])
+
+  // 토큰 삭제
+  const clearTokens = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_KEY)
+    localStorage.removeItem(EXPIRES_KEY)
+    setAccessToken(null)
+    setRefreshToken(null)
+    setTokenExpiresAt(0)
+  }, [])
+
+  // 로그인
+  const loginWithCredentials = useCallback(async (username: string, password: string) => {
+    const response = await loginUser(username, password)
+    if (response.passwordChangeRequired) {
+      // 비밀번호 변경 필요 → Login.tsx에서 처리하도록 특수 에러 throw
+      const err = new Error(response.message || '비밀번호 변경이 필요합니다.') as any
+      err.passwordChangeRequired = true
+      throw err
+    }
+    if (!response.success) {
+      throw new Error(response.message || '로그인에 실패했습니다.')
+    }
+    saveTokens(response)
+  }, [saveTokens])
+
+  // 자동 토큰 갱신
+  useEffect(() => {
+    if (!refreshToken || !tokenExpiresAt) return
+
+    // 만료 60초 전에 갱신
+    const timeUntilRefresh = tokenExpiresAt - Date.now() - 60000
+    if (timeUntilRefresh <= 0) {
+      // 이미 만료되었거나 곧 만료 - 즉시 갱신 시도
+      refreshAccessToken(refreshToken)
+        .then(response => {
+          if (response.success) {
+            saveTokens(response)
+          } else {
+            clearTokens()
+          }
+        })
+        .catch(() => clearTokens())
+      return
+    }
+
+    const timer = setTimeout(() => {
+      if (refreshToken) {
+        refreshAccessToken(refreshToken)
+          .then(response => {
+            if (response.success) {
+              saveTokens(response)
+            } else {
+              clearTokens()
+            }
+          })
+          .catch(() => clearTokens())
+      }
+    }, timeUntilRefresh)
+
+    return () => clearTimeout(timer)
+  }, [refreshToken, tokenExpiresAt, saveTokens, clearTokens])
+
+  // 현재 사용자 정보
+  const currentUser = useMemo(() => {
+    if (!accessToken) return null
+    return extractUserFromToken(accessToken)
+  }, [accessToken])
+
+  const isAuthenticated = !!accessToken && !!currentUser
+
+  const value = useMemo<AuthContextType>(() => ({
+    isLoading,
+    isAuthenticated,
+    currentUser,
+    users: [],
+    login: () => navigate('/login'),
+    logout: () => {
+      clearTokens()
+      navigate('/login')
+    },
+    switchUser: () => {},
+    loginWithCredentials,
+    getMenus: () => roleMenus[currentUser?.role || 'member'] || roleMenus.member,
+    isAdmin: () => currentUser?.roles?.includes('admin') || false,
+    isOperator: () => currentUser?.roles?.includes('operator') || currentUser?.roles?.includes('admin') || false,
+    getAccessToken: () => accessToken,
+  }), [isLoading, isAuthenticated, currentUser, accessToken, loginWithCredentials, clearTokens, navigate])
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error('useAuth must be used within AuthProvider')
   }
-  return context;
+  return context
 }

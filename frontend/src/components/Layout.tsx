@@ -32,10 +32,11 @@ export default function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const { } = useAuth()
+  const { currentUser, logout } = useAuth()
 
-  // Mock user (SSO 연동 전)
-  const currentUser = { name: '관리자', role: 'admin' }
+  // 사용자 표시 정보
+  const userName = currentUser?.name || '사용자'
+  const userRoleLabel = currentUser?.roleLabel || 'Member'
 
   return (
     <div className="min-h-screen bg-[var(--kecp-gray-50)]">
@@ -112,11 +113,11 @@ export default function Layout() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[var(--kecp-gray-200)]">
           <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--kecp-gray-50)]">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--kecp-primary)] to-[var(--kecp-secondary)] flex items-center justify-center text-white font-bold">
-              {currentUser.name.charAt(0)}
+              {userName.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--kecp-gray-900)] truncate">{currentUser.name}</p>
-              <p className="text-xs text-[var(--kecp-gray-500)]">운영 관리자</p>
+              <p className="text-sm font-medium text-[var(--kecp-gray-900)] truncate">{userName}</p>
+              <p className="text-xs text-[var(--kecp-gray-500)]">{userRoleLabel}</p>
             </div>
           </div>
         </div>
@@ -158,10 +159,10 @@ export default function Layout() {
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--kecp-gray-100)] transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--kecp-primary)] to-[var(--kecp-secondary)] flex items-center justify-center text-white text-sm font-bold">
-                  {currentUser.name.charAt(0)}
+                  {userName.charAt(0)}
                 </div>
                 <span className="hidden md:block text-sm font-medium text-[var(--kecp-gray-700)]">
-                  {currentUser.name}
+                  {userName}
                 </span>
                 <ChevronDown className={`w-4 h-4 text-[var(--kecp-gray-400)] transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -172,15 +173,21 @@ export default function Layout() {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-[var(--kecp-gray-200)] overflow-hidden z-50">
                     <div className="p-3 bg-gradient-to-r from-[var(--kecp-primary)] to-[var(--kecp-secondary)] text-white">
-                      <p className="font-medium">{currentUser.name}</p>
-                      <p className="text-xs text-white/80">운영 관리자</p>
+                      <p className="font-medium">{userName}</p>
+                      <p className="text-xs text-white/80">{userRoleLabel}</p>
                     </div>
                     <div className="p-2">
                       <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-[var(--kecp-gray-100)]">
                         <User className="w-4 h-4 text-[var(--kecp-gray-500)]" />
                         <span className="text-sm text-[var(--kecp-gray-700)]">프로필 설정</span>
                       </button>
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-red-50 text-red-600">
+                      <button 
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          logout()
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-red-50 text-red-600"
+                      >
                         <LogOut className="w-4 h-4" />
                         <span className="text-sm font-medium">로그아웃</span>
                       </button>
@@ -206,7 +213,7 @@ export default function Layout() {
                 <span className="text-sm text-[var(--kecp-gray-400)]">MSP 통합 운영 플랫폼</span>
               </div>
               <p className="text-sm text-[var(--kecp-gray-500)]">
-                © 2026 kohub. Powered by K-ECP.
+                &copy; 2026 kohub. Powered by K-ECP.
               </p>
             </div>
           </div>

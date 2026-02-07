@@ -1,36 +1,11 @@
-import { WebStorageStateStore } from 'oidc-client-ts'
-
 /**
- * OIDC 설정 (Keycloak k-ecp-kohub 클라이언트)
+ * Keycloak 설정 (참조용)
+ * 자체 로그인 방식으로 전환되어 OIDC 리다이렉트는 사용하지 않음.
+ * Backend가 Keycloak Direct Access Grants로 토큰을 발급하며,
+ * Frontend는 해당 JWT 토큰을 localStorage에 저장하여 사용.
  */
-export const oidcConfig = {
-  authority: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}`,
-  client_id: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'k-ecp-kohub',
-  redirect_uri: `${window.location.origin}/callback`,
-  post_logout_redirect_uri: window.location.origin,
-  response_type: 'code',
-  scope: 'openid profile email',
-  automaticSilentRenew: true,
-  loadUserInfo: true,
-  userStore: new WebStorageStateStore({ store: window.localStorage }),
-  
-  // Keycloak 특화 설정
-  metadata: {
-    issuer: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}`,
-    authorization_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/auth`,
-    token_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/token`,
-    userinfo_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/userinfo`,
-    end_session_endpoint: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/logout`,
-    jwks_uri: `${import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp'}/protocol/openid-connect/certs`,
-  },
+export const keycloakConfig = {
+  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180',
+  realm: import.meta.env.VITE_KEYCLOAK_REALM || 'k-ecp',
+  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'k-ecp-kohub',
 }
-
-/**
- * SSO 활성화 여부 (환경변수로 제어)
- */
-export function isSSOEnabled(): boolean {
-  return import.meta.env.VITE_SSO_ENABLED === 'true'
-}
-
-// 별칭 (호환성)
-export const isSsoEnabled = isSSOEnabled()
