@@ -10,6 +10,7 @@ import HostDetail from './pages/HostDetail'
 import TicketList from './pages/TicketList'
 import TicketForm from './pages/TicketForm'
 import TicketDetail from './pages/TicketDetail'
+import Profile from './pages/Profile'
 
 /**
  * 인증 필요 라우트 보호 컴포넌트
@@ -60,6 +61,9 @@ function App() {
           <Route path="tickets" element={<TicketList />} />
           <Route path="tickets/new" element={<TicketForm />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
+
+          {/* 프로필 */}
+          <Route path="profile" element={<Profile />} />
 
           <Route path="*" element={<NotFound />} />
         </Route>

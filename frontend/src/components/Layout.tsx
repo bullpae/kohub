@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, 
   Server, 
@@ -30,6 +30,7 @@ const navigation = [
  */
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const { currentUser, logout } = useAuth()
@@ -177,7 +178,13 @@ export default function Layout() {
                       <p className="text-xs text-white/80">{userRoleLabel}</p>
                     </div>
                     <div className="p-2">
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-[var(--kecp-gray-100)]">
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          navigate('/profile')
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-[var(--kecp-gray-100)]"
+                      >
                         <User className="w-4 h-4 text-[var(--kecp-gray-500)]" />
                         <span className="text-sm text-[var(--kecp-gray-700)]">프로필 설정</span>
                       </button>
