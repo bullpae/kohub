@@ -1,0 +1,283 @@
+# ================================================================
+# K-ECP 통합 플랫폼 Compose
+#
+# 서비스: Nginx + Keycloak + kohub + KustHub + Uptime Kuma + Termix
+#
+# 사용법:
+#   시작: podman-compose -f compose.platform.yml up -d
+#   중지: podman-compose -f compose.platform.yml down
+#   로그: podman-compose -f compose.platform.yml logs -f [서비스]
+#
+# 포트: 외부 80 (HTTP) / 443 (HTTPS)만 노출
+# ================================================================
+
+services:
+  # ============================================================
+  # 인프라 계층 (Infrastructure)
+  # ============================================================
+
+  # PostgreSQL — 통합 DB (keycloak, kusthub, kohub)
+  postgres:
+    image: docker.io/postgres:16-alpine
+    container_name: kecp-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-kecp_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
+    volumes:
+      - kecp-postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER:-kecp_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+    networks:
+      - kecp-platform
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # Redis — KustHub SMS 인증코드, 캐시
+  redis:
+    image: docker.io/redis:7-alpine
+    container_name: kecp-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - kecp-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - kecp-platform
+
+  # ============================================================
+  # 인증 계층 (Authentication)
+  # ============================================================
+
+  # Keycloak SSO
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: kecp-keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+      KC_HOSTNAME_URL: ${KEYCLOAK_EXTERNAL_URL:-http://localhost/auth}
+      KC_HOSTNAME_ADMIN_URL: ${KEYCLOAK_EXTERNAL_URL:-http://localhost/auth}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+    volumes:
+      - ../kecp-sso/keycloak/themes:/opt/keycloak/themes:ro
+      - ../kecp-sso/keycloak/import:/opt/keycloak/data/import:ro
+    command: start --import-realm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    networks:
+      - kecp-platform
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ============================================================
+  # 애플리케이션 계층 — kohub (MSP 운영 센터)
+  # ============================================================
+
+  kohub-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kohub-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: sso
+      DB_URL: jdbc:postgresql://postgres:5432/kohub
+      DB_USER: kohub
+      DB_PASSWORD: ${KOHUB_DB_PASSWORD:-kohub123}
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_EXTERNAL_URL:-http://localhost/auth}/realms/k-ecp
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      UPTIME_KUMA_ENABLED: "true"
+      UPTIME_KUMA_URL: http://uptime-kuma:3001
+      TERMIX_ENABLED: "true"
+      TERMIX_URL: http://termix:8080
+      PROMETHEUS_ENABLED: ${PROMETHEUS_ENABLED:-false}
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-}
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    restart: always
+    networks:
+      - kecp-platform
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  kohub-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+        VITE_SSO_ENABLED: "true"
+        VITE_KEYCLOAK_URL: ${KEYCLOAK_EXTERNAL_URL:-http://localhost/auth}
+        VITE_KEYCLOAK_REALM: k-ecp
+        VITE_KEYCLOAK_CLIENT_ID: k-ecp-kohub
+        VITE_UPTIME_KUMA_URL: ${UPTIME_KUMA_EXTERNAL_URL:-/monitor}
+        VITE_TERMIX_URL: ${TERMIX_EXTERNAL_URL:-/terminal}
+    container_name: kohub-frontend
+    depends_on:
+      - kohub-backend
+    restart: always
+    networks:
+      - kecp-platform
+
+  # ============================================================
+  # 애플리케이션 계층 — KustHub (고객 포탈)
+  # ============================================================
+
+  kusthub-backend:
+    build:
+      context: ../KustHub/backend
+      dockerfile: Dockerfile
+    container_name: kusthub-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/kusthub
+      SPRING_DATASOURCE_USERNAME: kusthub
+      SPRING_DATASOURCE_PASSWORD: ${KUSTHUB_DB_PASSWORD:-kusthub123}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080/auth
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_EXTERNAL_URL:-http://localhost/auth}/realms/k-ecp
+      SSO_ENABLED: "true"
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    restart: always
+    networks:
+      - kecp-platform
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  kusthub-frontend:
+    build:
+      context: ../KustHub/frontend
+      dockerfile: Dockerfile
+    container_name: kusthub-frontend
+    depends_on:
+      - kusthub-backend
+    restart: always
+    networks:
+      - kecp-platform
+
+  # ============================================================
+  # 운영 도구 계층 (Operations)
+  # ============================================================
+
+  # Uptime Kuma — 서비스 모니터링
+  uptime-kuma:
+    image: docker.io/louislam/uptime-kuma:2
+    container_name: kecp-uptime-kuma
+    volumes:
+      - uptime-kuma-data:/app/data
+    restart: always
+    networks:
+      - kecp-platform
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const http=require('http');const r=http.get('http://localhost:3001',s=>{process.exit(s.statusCode===200?0:1)});r.on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Termix — 웹 SSH 터미널
+  termix:
+    image: ghcr.io/lukegus/termix:latest
+    container_name: kecp-termix
+    volumes:
+      - termix-data:/app/data
+    environment:
+      PORT: "8080"
+    restart: always
+    networks:
+      - kecp-platform
+
+  # ============================================================
+  # 게이트웨이 계층 (Gateway)
+  # ============================================================
+
+  # Nginx — 리버스 프록시 (단일 진입점)
+  nginx:
+    image: docker.io/nginx:alpine
+    container_name: kecp-nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/platform.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - kohub-frontend
+      - kohub-backend
+      - kusthub-frontend
+      - kusthub-backend
+      - keycloak
+      - uptime-kuma
+      - termix
+    restart: always
+    networks:
+      - kecp-platform
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+# ============================================================
+# 볼륨
+# ============================================================
+volumes:
+  kecp-postgres-data:
+  kecp-redis-data:
+  uptime-kuma-data:
+  termix-data:
+
+# ============================================================
+# 네트워크
+# ============================================================
+networks:
+  kecp-platform:
+    driver: bridge

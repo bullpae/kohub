@@ -41,3 +41,9 @@ nginx/ssl/
 
 # Docker volumes (local)
 data/
+
+# Platform secrets
+.env.platform
+
+# Backups
+backups/
