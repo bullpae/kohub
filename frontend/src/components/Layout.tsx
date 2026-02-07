@@ -11,7 +11,8 @@ import {
   ChevronDown,
   ExternalLink,
   User,
-  LogOut
+  LogOut,
+  MonitorCheck
 } from 'lucide-react'
 import { useState } from 'react'
 import Logo from './Logo'
@@ -20,6 +21,7 @@ import { useAuth } from '../context/AuthContext'
 const navigation = [
   { name: '대시보드', href: '/', icon: LayoutDashboard },
   { name: '호스트', href: '/hosts', icon: Server },
+  { name: '모니터링', href: '/monitoring', icon: MonitorCheck },
   { name: '티켓', href: '/tickets', icon: TicketCheck },
   { name: '터미널', href: '/terminal', icon: Terminal },
   { name: '설정', href: '/settings', icon: Settings },

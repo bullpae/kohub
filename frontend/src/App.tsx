@@ -10,6 +10,9 @@ import HostDetail from './pages/HostDetail'
 import TicketList from './pages/TicketList'
 import TicketForm from './pages/TicketForm'
 import TicketDetail from './pages/TicketDetail'
+import MonitoringPage from './pages/MonitoringPage'
+import TerminalPage from './pages/TerminalPage'
+import SettingsPage from './pages/SettingsPage'
 import Profile from './pages/Profile'
 
 /**
@@ -61,6 +64,11 @@ function App() {
           <Route path="tickets" element={<TicketList />} />
           <Route path="tickets/new" element={<TicketForm />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
+
+          {/* 모니터링/터미널/설정 */}
+          <Route path="monitoring" element={<MonitoringPage />} />
+          <Route path="terminal" element={<TerminalPage />} />
+          <Route path="settings" element={<SettingsPage />} />
 
           {/* 프로필 */}
           <Route path="profile" element={<Profile />} />

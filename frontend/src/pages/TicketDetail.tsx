@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, MessageCircle, Send, CheckCircle, Play, Pause, RotateCcw, Clock, User } from 'lucide-react'
+import { ArrowLeft, MessageCircle, Send, CheckCircle, Play, Pause, RotateCcw, Clock, User, Terminal, Server, ExternalLink } from 'lucide-react'
 import { getTicket, receiveTicket, transitionTicket, resolveTicket, addComment, type TicketStatus } from '../api/tickets'
+import { getHost, getTerminalUrl } from '../api/hosts'
 import { Card, CardHeader, StatusBadge, PriorityBadge, Loading, Button } from '../components/common'
 
 const sourceLabels: Record<string, string> = {
@@ -31,6 +32,24 @@ export default function TicketDetail() {
     queryKey: ['ticket', id],
     queryFn: () => getTicket(id!),
     enabled: !!id,
+  })
+
+  // 관련 호스트 정보 조회
+  const { data: relatedHost } = useQuery({
+    queryKey: ['host', ticket?.hostId],
+    queryFn: () => getHost(ticket!.hostId!),
+    enabled: !!ticket?.hostId,
+  })
+
+  // 터미널 접속
+  const terminalMutation = useMutation({
+    mutationFn: () => getTerminalUrl(ticket!.hostId!, ticket!.id),
+    onSuccess: (data) => {
+      window.open(data.url, '_blank', 'width=1024,height=768')
+    },
+    onError: () => {
+      alert('터미널 URL 생성에 실패했습니다. Termix 연동을 확인해주세요.')
+    },
   })
 
   const receiveMutation = useMutation({
@@ -112,6 +131,18 @@ export default function TicketDetail() {
 
         {/* 액션 버튼 */}
         <div className="flex flex-wrap items-center gap-2 ml-12 lg:ml-0">
+          {/* 터미널 접속 (호스트가 연결된 경우) */}
+          {ticket.hostId && (
+            <Button
+              variant="primary"
+              icon={Terminal}
+              onClick={() => terminalMutation.mutate()}
+              loading={terminalMutation.isPending}
+              className="bg-[var(--kecp-gray-900)] hover:bg-[var(--kecp-gray-700)]"
+            >
+              터미널 접속
+            </Button>
+          )}
           {ticket.status === 'NEW' && (
             <Button
               variant="primary"
@@ -272,6 +303,44 @@ export default function TicketDetail() {
               )}
             </dl>
           </Card>
+
+          {/* 관련 호스트 정보 */}
+          {relatedHost && (
+            <Card>
+              <CardHeader title="관련 호스트" />
+              <div className="space-y-3">
+                <Link
+                  to={`/hosts/${relatedHost.id}`}
+                  className="flex items-center gap-3 p-3 bg-[var(--kecp-gray-50)] rounded-lg border border-[var(--kecp-gray-200)] hover:border-[var(--kecp-primary)] transition-colors group"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--kecp-primary)] to-[var(--kecp-secondary)] flex items-center justify-center">
+                    <Server className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[var(--kecp-gray-900)] truncate">{relatedHost.name}</span>
+                      <StatusBadge status={relatedHost.status} />
+                    </div>
+                    {relatedHost.sshConfig && (
+                      <p className="text-xs text-[var(--kecp-gray-500)] font-mono mt-0.5">
+                        {relatedHost.sshConfig.host}:{relatedHost.sshConfig.port}
+                      </p>
+                    )}
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-[var(--kecp-gray-300)] group-hover:text-[var(--kecp-primary)]" />
+                </Link>
+
+                <button
+                  onClick={() => terminalMutation.mutate()}
+                  disabled={terminalMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[var(--kecp-gray-900)] text-white rounded-lg text-sm font-medium hover:bg-[var(--kecp-gray-700)] disabled:opacity-50 transition-colors"
+                >
+                  <Terminal className="w-4 h-4" />
+                  {terminalMutation.isPending ? '연결 중...' : '터미널 접속'}
+                </button>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 
